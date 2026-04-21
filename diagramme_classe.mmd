@@ -1,0 +1,177 @@
+classDiagram
+    %%----------------------------------
+    %% UTILISATEURS (HERITAGE)
+    %%----------------------------------
+    class Utilisateur {
+        <<abstract>>
+        +String id
+        +String nomComplet
+        +String email
+        +String motDePasse
+        +String telephone
+        +seConnecter()
+        +seDeconnecter()
+    }
+
+    class Entrepreneur {
+        +String ice
+        +String statutJuridique
+        +creerProjet()
+        +payerPrestataire()
+        +calculerTVA()
+    }
+
+    class Investisseur {
+        +double budgetMax
+        +String[] secteursInteret
+        +contacterEntrepreneur()
+        +investir()
+    }
+
+    class Prestataire {
+        +String portfolio
+        +double noteConfiance
+        +proposerService()
+        +livrerCommande()
+    }
+
+    class Formateur {
+        +String biographie
+        +String expertise
+        +publierCours()
+    }
+
+    class Administrateur {
+        +validerCompte()
+        +modererContenu()
+        +voirStatistiques()
+    }
+
+    Utilisateur <|-- Entrepreneur : Heritage
+    Utilisateur <|-- Investisseur : Heritage
+    Utilisateur <|-- Prestataire : Heritage
+    Utilisateur <|-- Formateur : Heritage
+    Utilisateur <|-- Administrateur : Heritage
+
+
+    %%----------------------------------
+    %% MODULE 1, 4 & 5 : PROJET, IA & KANBAN
+    %%----------------------------------
+    class Projet {
+        +String nom
+        +String description
+        +String secteur
+        +double budgetRecherche
+        +String stadeEvolution
+        +soumettreAuxInvestisseurs()
+    }
+
+    class BusinessPlan {
+        +String resumeExecutif
+        +String etudeMarche
+        +String planFinancier
+        +String analyseSWOT
+        +genererViaIA()
+    }
+
+    class IA_Generative {
+        <<interface>>
+        +genererTexte(prompt)
+    }
+
+    class TacheKanban {
+        +String titre
+        +String statut
+        +Date dateEcheance
+    }
+
+    Entrepreneur "1" *-- "0..*" Projet : Composition
+    Projet "1" *-- "1" BusinessPlan : Composition
+    BusinessPlan ..> IA_Generative : Dependance
+    Projet "1" *-- "0..*" TacheKanban : Composition
+    
+    %% Matching
+    Investisseur "0..*" --> "0..*" Projet : Association
+
+
+    %%----------------------------------
+    %% MODULE 3 : MARKETPLACE B2B
+    %%----------------------------------
+    class ServiceB2B {
+        +String titre
+        +String categorie
+        +double prix
+    }
+
+    class Commande {
+        +Date dateCreation
+        +String statutPaiement
+        +String statutLivraison
+        +bloquerFondsEscrow()
+        +libererFonds()
+    }
+
+    Prestataire "1" -- "0..*" ServiceB2B : Propose
+    Entrepreneur "1" --> "0..*" Commande : Passe
+    Commande "0..*" --> "1" ServiceB2B : Concerne
+
+
+    %%----------------------------------
+    %% MODULE 2, 7 & 8 : GESTION, CRM & COMPTA
+    %%----------------------------------
+    class Facture {
+        +String numeroRef
+        +double totalHT
+        +double tva
+        +Date dateEcheance
+        +telechargerPDF()
+    }
+
+    class ProspectCRM {
+        +String nomClient
+        +String etapePipeline
+        +genererDevis()
+    }
+
+    Entrepreneur "1" *-- "0..*" Facture : Genere
+    Entrepreneur "1" *-- "0..*" ProspectCRM : Gere
+
+
+    %%----------------------------------
+    %% MODULE 6 : MICROLEARNING
+    %%----------------------------------
+    class Cours {
+        +String titre
+        +String formatMedia
+        +int dureeMinutes
+    }
+
+    class Certification {
+        +Date dateObtention
+        +String idUniqueBlockchain
+    }
+
+    Formateur "1" --> "0..*" Cours : Cree
+    Cours "1" o-- "0..*" Certification : Delivre
+    Entrepreneur "0..*" ..> "0..*" Cours : S_inscrit
+
+
+    %%----------------------------------
+    %% MODULE 9 & 10 : RH & INVENTAIRE
+    %%----------------------------------
+    class Employe {
+        +String matricule
+        +String poste
+        +double salaireBase
+        +calculerPaie()
+    }
+
+    class ProduitStock {
+        +String sku
+        +String nom
+        +int quantiteDisponible
+        +alerteReapprovisionnement()
+    }
+
+    Entrepreneur "1" o-- "0..*" Employe : Emploie
+    Entrepreneur "1" *-- "0..*" ProduitStock : Stocke
