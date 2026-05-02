@@ -30,17 +30,14 @@ class FeaturesBar extends StatelessWidget {
         child: Container(
           constraints: const BoxConstraints(maxWidth: 1200),
           child: isMobile
-              ? GridView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 1.3,
-                  ),
-                  itemCount: features.length,
-                  itemBuilder: (context, index) => _buildFeatureCard(features[index]),
+              ? Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  alignment: WrapAlignment.center,
+                  children: features.map((f) => SizedBox(
+                    width: (screenWidth - 32 - 16) / 2 > 300 ? (screenWidth - 32 - 16) / 2 : screenWidth - 32,
+                    child: _buildFeatureCard(f),
+                  )).toList(),
                 )
               : Row(
                   children: features

@@ -19,7 +19,7 @@ class _NavBarState extends State<NavBar> {
   @override
   Widget build(BuildContext context) {
     final w = MediaQuery.of(context).size.width;
-    final mobile = w < 900;
+    final mobile = w < 1200; // Increased from 900 to prevent horizontal overflow
 
     return Container(
       width: double.infinity,
@@ -151,7 +151,7 @@ class _NavBarState extends State<NavBar> {
       onExit: (_) => setState(() => _loginHovered = false),
       cursor: SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: () => Navigator.of(context).pushNamed('/signup'),
+        onTap: () => Navigator.of(context).pushNamed('/login'),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),

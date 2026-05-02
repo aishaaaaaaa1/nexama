@@ -1,5 +1,10 @@
+import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:url_launcher/url_launcher.dart';
+import '../config/api_config.dart';
 import '../theme/app_theme.dart';
 import '../widgets/footer_section.dart';
 
@@ -22,8 +27,11 @@ class _SignupPageState extends State<SignupPage> {
   bool _obscureConfirmPassword = true;
   bool _continueHovered = false;
   bool _backHovered = false;
-  bool _googleHovered = false;
-  bool _linkedinHovered = false;
+  bool _isLoading = false;
+  bool _isResending = false;
+  bool _isCheckingStatus = false;
+  int  _resendCooldown = 0;
+  Timer? _cooldownTimer;
 
   int _currentStep = 1;
   String _selectedRole = 'Entrepreneur';
@@ -36,6 +44,7 @@ class _SignupPageState extends State<SignupPage> {
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _cooldownTimer?.cancel();
     super.dispose();
   }
 
@@ -486,35 +495,39 @@ class _SignupPageState extends State<SignupPage> {
             const SizedBox(height: 12),
             _buildRoleSelection(),
           ] else if (_currentStep == 3) ...[
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 60),
-                child: Text(
-                  'Un code de vérification a été envoyé à votre e-mail.\nVeuillez vérifier votre boîte de réception.',
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.inter(
-                    color: NexaColors.textSecondary,
-                    fontSize: 14.5,
-                    height: 1.6,
-                  ),
-                ),
-              ),
-            ),
+            _buildEmailVerificationStep(),
           ] else if (_currentStep == 4) ...[
              Center(
               child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 60),
+                padding: const EdgeInsets.symmetric(vertical: 40),
                 child: Column(
                   children: [
-                    Icon(Icons.check_circle_outline, size: 60, color: NexaColors.primaryGreen),
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: NexaColors.lightGreen,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.check_circle_outline, size: 48, color: NexaColors.primaryGreen),
+                    ),
                     const SizedBox(height: 20),
                     Text(
-                      'Votre compte a été créé avec succès !',
+                      'Compte créé avec succès !',
                       textAlign: TextAlign.center,
                       style: GoogleFonts.inter(
                         color: NexaColors.darkNavy,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Votre espace ${_selectedRole} est prêt.',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(
+                        color: NexaColors.textSecondary,
+                        fontSize: 14,
                       ),
                     ),
                   ],
@@ -525,8 +538,8 @@ class _SignupPageState extends State<SignupPage> {
           
           const SizedBox(height: 28),
 
-          // Action Buttons
-          if (_currentStep < 4)
+          // Action Buttons — masqués à l'étape 3 (attente de clic email)
+          if (_currentStep < 3)
             Row(
               children: [
                 if (_currentStep > 1) ...[
@@ -536,43 +549,14 @@ class _SignupPageState extends State<SignupPage> {
                 Expanded(child: _buildContinueButton()),
               ],
             )
-          else ...[
+          else if (_currentStep == 4) ...[
             SizedBox(
               width: double.infinity,
-              child: _buildContinueButton(label: 'Aller au tableau de bord'),
+              child: _buildContinueButton(label: 'Se connecter'),
             ),
           ],
 
           if (_currentStep == 1) ...[
-            const SizedBox(height: 24),
-            // Divider
-            Row(
-              children: [
-                Expanded(child: Divider(color: NexaColors.border.withValues(alpha: 0.6))),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    'ou s\'inscrire avec',
-                    style: GoogleFonts.inter(
-                      color: NexaColors.textMuted,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ),
-                Expanded(child: Divider(color: NexaColors.border.withValues(alpha: 0.6))),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Social buttons
-            Row(
-              children: [
-                Expanded(child: _buildSocialButton('Google', _googleIcon(), _googleHovered, (v) => setState(() => _googleHovered = v))),
-                const SizedBox(width: 16),
-                Expanded(child: _buildSocialButton('LinkedIn', _linkedinIcon(), _linkedinHovered, (v) => setState(() => _linkedinHovered = v))),
-              ],
-            ),
             const SizedBox(height: 28),
 
             // Login link
@@ -808,6 +792,246 @@ class _SignupPageState extends State<SignupPage> {
   }
 
   // ─── Text Field ───
+  // ─── Step 3 : Email Verification UI ───
+  Widget _buildEmailVerificationStep() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Column(
+        children: [
+          // Animated envelope container
+          Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              color: NexaColors.lightGreen,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.mark_email_unread_outlined, size: 52, color: NexaColors.primaryGreen),
+          ),
+          const SizedBox(height: 24),
+
+          Text(
+            'Vérifiez votre boîte mail',
+            style: GoogleFonts.inter(
+              color: NexaColors.darkNavy,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+
+          // Show the user's email
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: NexaColors.bgLight,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: NexaColors.border.withValues(alpha: 0.6)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.email_outlined, size: 16, color: NexaColors.textSecondary),
+                const SizedBox(width: 8),
+                Text(
+                  _emailController.text.trim(),
+                  style: GoogleFonts.inter(
+                    color: NexaColors.darkNavy,
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          Text(
+            'Un lien de confirmation a été envoyé à cette adresse.\nCliquez sur le lien dans l\'e-mail pour activer votre compte.',
+            style: GoogleFonts.inter(
+              color: NexaColors.textSecondary,
+              fontSize: 13.5,
+              height: 1.6,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 28),
+
+          // Open Gmail button
+          MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: () async {
+                final url = Uri.parse('https://mail.google.com/');
+                await launchUrl(url, mode: LaunchMode.externalApplication);
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                decoration: BoxDecoration(
+                  color: NexaColors.bgLight,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: NexaColors.border.withValues(alpha: 0.7)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.open_in_new, size: 18, color: NexaColors.primaryGreen),
+                    const SizedBox(width: 8),
+                    Text('Aller sur Gmail',
+                        style: GoogleFonts.inter(color: NexaColors.primaryGreen, fontSize: 14, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // NEW: Next Button (Check Status)
+          MouseRegion(
+            cursor: _isCheckingStatus ? SystemMouseCursors.basic : SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: _isCheckingStatus ? null : _checkVerificationStatus,
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  color: NexaColors.primaryGreen,
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [BoxShadow(color: NexaColors.primaryGreen.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4))],
+                ),
+                child: Center(
+                  child: _isCheckingStatus 
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : Text('Continuer', style: GoogleFonts.inter(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Resend button with cooldown
+          MouseRegion(
+            cursor: _resendCooldown > 0 ? SystemMouseCursors.basic : SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: (_isResending || _resendCooldown > 0) ? null : _resendVerificationEmail,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: NexaColors.border.withValues(alpha: 0.7)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (_isResending)
+                      const SizedBox(width: 18, height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: NexaColors.primaryGreen))
+                    else if (_resendCooldown > 0) ...[ 
+                      Icon(Icons.timer_outlined, size: 16, color: NexaColors.textMuted),
+                      const SizedBox(width: 8),
+                      Text('Renvoyer dans ${_resendCooldown}s',
+                          style: GoogleFonts.inter(color: NexaColors.textMuted, fontSize: 13.5, fontWeight: FontWeight.w500)),
+                    ] else ...[
+                      Icon(Icons.refresh, size: 16, color: NexaColors.primaryGreen),
+                      const SizedBox(width: 8),
+                      Text("Renvoyer l'email",
+                          style: GoogleFonts.inter(color: NexaColors.primaryGreen, fontSize: 13.5, fontWeight: FontWeight.w600)),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 20),
+          Text(
+            '📌 Pensez à vérifier vos spams si vous ne trouvez pas l\'email.',
+            style: GoogleFonts.inter(color: NexaColors.textMuted, fontSize: 12, height: 1.5),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ─── Resend Verification Email ───
+  Future<void> _resendVerificationEmail() async {
+    setState(() => _isResending = true);
+    try {
+      final response = await http.post(
+        ApiConfig.uri('/api/auth/resend-verification'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'email': _emailController.text.trim()}),
+      );
+      if (!mounted) return;
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      if (response.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(data['message'] ?? 'Email renvoyé !',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w500)),
+          backgroundColor: NexaColors.primaryGreen,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(20),
+        ));
+        // Start 60s cooldown
+        setState(() => _resendCooldown = 60);
+        _cooldownTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+          if (!mounted) { t.cancel(); return; }
+          setState(() {
+            if (_resendCooldown > 0) { _resendCooldown--; } else { t.cancel(); }
+          });
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(data['error'] ?? 'Erreur lors du renvoi'),
+        ));
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossible de contacter le serveur.')),
+      );
+    } finally {
+      if (mounted) setState(() => _isResending = false);
+    }
+  }
+
+  // ─── Check Verification Status ───
+  Future<void> _checkVerificationStatus() async {
+    setState(() => _isCheckingStatus = true);
+    try {
+      final response = await http.get(
+        ApiConfig.uri('/api/auth/status?email=${_emailController.text.trim()}'),
+      );
+      if (!mounted) return;
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      
+      if (response.statusCode == 200 && data['is_verified'] == true) {
+        setState(() => _currentStep = 4); // Move to success page
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Veuillez d\'abord confirmer votre email en cliquant sur le lien reçu.',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w500)),
+          backgroundColor: Colors.orange.shade800,
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Erreur de connexion au serveur.')),
+      );
+    } finally {
+      if (mounted) setState(() => _isCheckingStatus = false);
+    }
+  }
+
   Widget _buildTextField({
     required TextEditingController controller,
     required String hint,
@@ -919,23 +1143,103 @@ class _SignupPageState extends State<SignupPage> {
     );
   }
 
-  void _handleContinue() {
-    if (_currentStep < 4) {
+  Future<void> _handleContinue() async {
+    if (_currentStep == 1) {
+      if (_firstNameController.text.trim().isEmpty || _lastNameController.text.trim().isEmpty || _emailController.text.trim().isEmpty || _passwordController.text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez remplir tous les champs obligatoires')));
+        return;
+      }
+      if (_passwordController.text != _confirmPasswordController.text) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Les mots de passe ne correspondent pas')));
+        return;
+      }
+      setState(() => _currentStep++);
+    } else if (_currentStep == 2) {
+      // Connect to backend
+      setState(() => _isLoading = true);
+      try {
+        final response = await http.post(
+          ApiConfig.uri('/api/auth/register'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'nom_complet': '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}',
+            'email': _emailController.text.trim(),
+            'mot_de_passe': _passwordController.text,
+            'telephone': _phoneController.text.trim(),
+            'role': _selectedRole,
+          }),
+        );
+        
+        setState(() => _isLoading = false);
+
+        if (response.statusCode == 201) {
+          // Success code 201
+          setState(() => _currentStep++);
+        } else {
+          // Handle error gracefully
+          final data = jsonDecode(response.body);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(data['error'] ?? 'Erreur lors de l\'inscription', style: GoogleFonts.inter())),
+          );
+        }
+      } catch (e) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Impossible de contacter le serveur, vérifiez votre connexion.')),
+        );
+      }
+    } else if (_currentStep < 4) {
       setState(() => _currentStep++);
     } else {
-      // Simulate dashboard redirection
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Redirection vers le tableau de bord...',
-            style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+      // Redirection vers le tableau de bord selon le rôle
+      if (_selectedRole == 'Entrepreneur') {
+        Navigator.of(context).pushReplacementNamed(
+          '/dashboard/entrepreneur',
+          arguments: {
+            'nom_complet': '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}',
+            'email': _emailController.text.trim(),
+            'role': _selectedRole,
+          },
+        );
+      } else if (_selectedRole == 'Investisseur') {
+        Navigator.of(context).pushReplacementNamed(
+          '/dashboard/investisseur',
+          arguments: {
+            'nom_complet': '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}',
+            'email': _emailController.text.trim(),
+            'role': _selectedRole,
+          },
+        );
+      } else if (_selectedRole == 'Prestataire') {
+        Navigator.of(context).pushReplacementNamed(
+          '/dashboard/prestataire',
+          arguments: {
+            'nom_complet': '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}',
+            'email': _emailController.text.trim(),
+            'role': _selectedRole,
+          },
+        );
+      } else if (_selectedRole == 'Formateur') {
+        Navigator.of(context).pushReplacementNamed(
+          '/dashboard/formateur',
+          arguments: {
+            'nom_complet': '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}',
+            'email': _emailController.text.trim(),
+            'role': _selectedRole,
+          },
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Tableau de bord ${_selectedRole} bientôt disponible !',
+                style: GoogleFonts.inter(fontWeight: FontWeight.w500)),
+            backgroundColor: NexaColors.primaryGreen,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(20),
           ),
-          backgroundColor: NexaColors.primaryGreen,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          margin: const EdgeInsets.all(20),
-        ),
-      );
+        );
+      }
     }
   }
 
@@ -947,36 +1251,45 @@ class _SignupPageState extends State<SignupPage> {
 
   // ─── Continue Button ───
   Widget _buildContinueButton({String? label}) {
+    final bool isHoverActive = _continueHovered || _isLoading;
     return MouseRegion(
       onEnter: (_) => setState(() => _continueHovered = true),
       onExit: (_) => setState(() => _continueHovered = false),
-      cursor: SystemMouseCursors.click,
+      cursor: _isLoading ? SystemMouseCursors.basic : SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: _handleContinue,
+        onTap: _isLoading ? null : _handleContinue,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
-            color: _continueHovered ? NexaColors.darkGreen : NexaColors.primaryGreen,
+            color: isHoverActive ? NexaColors.darkGreen : NexaColors.primaryGreen,
             borderRadius: BorderRadius.circular(12),
-            boxShadow: _continueHovered
+            boxShadow: isHoverActive
                 ? [BoxShadow(color: NexaColors.primaryGreen.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 6))]
                 : [BoxShadow(color: NexaColors.primaryGreen.withValues(alpha: 0.2), blurRadius: 8, offset: const Offset(0, 3))],
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                label ?? 'Continuer',
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontSize: 15.5,
-                  fontWeight: FontWeight.w600,
+              if (_isLoading)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                )
+              else ...[
+                Text(
+                  label ?? 'Continuer',
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.arrow_forward, size: 18, color: Colors.white),
+                const SizedBox(width: 8),
+                const Icon(Icons.arrow_forward, size: 18, color: Colors.white),
+              ]
             ],
           ),
         ),
@@ -1021,77 +1334,7 @@ class _SignupPageState extends State<SignupPage> {
     );
   }
 
-  // ─── Social Buttons ───
-  Widget _buildSocialButton(String label, Widget icon, bool isHovered, ValueChanged<bool> onHover) {
-    return MouseRegion(
-      onEnter: (_) => onHover(true),
-      onExit: (_) => onHover(false),
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () {
-          // TODO: Implement social login
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            color: isHovered ? NexaColors.bgLight : Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: NexaColors.border.withValues(alpha: 0.7)),
-            boxShadow: isHovered
-                ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))]
-                : [],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              icon,
-              const SizedBox(width: 10),
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  color: NexaColors.darkNavy,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
-  // ─── Google Icon ───
-  Widget _googleIcon() {
-    return SizedBox(
-      width: 20,
-      height: 20,
-      child: CustomPaint(painter: _GoogleLogoPainter()),
-    );
-  }
-
-  // ─── LinkedIn Icon ───
-  Widget _linkedinIcon() {
-    return Container(
-      width: 22,
-      height: 22,
-      decoration: BoxDecoration(
-        color: const Color(0xFF0A66C2),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Center(
-        child: Text(
-          'in',
-          style: GoogleFonts.inter(
-            color: Colors.white,
-            fontSize: 13,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 // ───────────────────── HELPER WIDGETS ─────────────────────
@@ -1205,76 +1448,6 @@ class _HoverButtonState extends State<_HoverButton> {
   }
 }
 
-// ─── Google Logo Painter ───
-class _GoogleLogoPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final w = size.width;
-    final h = size.height;
-    final center = Offset(w / 2, h / 2);
-    final radius = w / 2;
 
-    // Blue arc (top-right)
-    final bluePaint = Paint()
-      ..color = const Color(0xFF4285F4)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.2
-      ..strokeCap = StrokeCap.butt;
-
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius * 0.65),
-      -0.8, -2.0, false, bluePaint,
-    );
-
-    // Red arc (top-left)
-    final redPaint = Paint()
-      ..color = const Color(0xFFEA4335)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.2
-      ..strokeCap = StrokeCap.butt;
-
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius * 0.65),
-      -2.8, -1.0, false, redPaint,
-    );
-
-    // Yellow arc (bottom-left)
-    final yellowPaint = Paint()
-      ..color = const Color(0xFFFBBC05)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.2
-      ..strokeCap = StrokeCap.butt;
-
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius * 0.65),
-      2.35, -1.1, false, yellowPaint,
-    );
-
-    // Green arc (bottom-right)
-    final greenPaint = Paint()
-      ..color = const Color(0xFF34A853)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.2
-      ..strokeCap = StrokeCap.butt;
-
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius * 0.65),
-      1.25, -1.1, false, greenPaint,
-    );
-
-    // Blue horizontal bar (right side of G)
-    final barPaint = Paint()
-      ..color = const Color(0xFF4285F4)
-      ..style = PaintingStyle.fill;
-
-    canvas.drawRect(
-      Rect.fromLTWH(w * 0.5, h * 0.42, w * 0.45, h * 0.18),
-      barPaint,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
 
 

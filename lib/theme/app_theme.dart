@@ -49,22 +49,22 @@ class NexaShadows {
   NexaShadows._();
 
   static List<BoxShadow> card = [
-    BoxShadow(color: Colors.black.withValues(alpha: 0.06), blurRadius: 20, offset: const Offset(0, 4)),
+    BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 20, offset: const Offset(0, 4)),
   ];
 
   static List<BoxShadow> cardHover = [
-    BoxShadow(color: NexaColors.primaryGreen.withValues(alpha: 0.15), blurRadius: 30, offset: const Offset(0, 8)),
+    BoxShadow(color: NexaColors.primaryGreen.withOpacity(0.15), blurRadius: 30, offset: const Offset(0, 8)),
   ];
 
   static List<BoxShadow> navbar = [
-    BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 2)),
+    BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 2)),
   ];
 
   static List<BoxShadow> dashboard = [
-    BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 40, offset: const Offset(0, 16)),
+    BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 40, offset: const Offset(0, 16)),
   ];
 
   static List<BoxShadow> mockup = [
-    BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 30, offset: const Offset(0, 10)),
+    BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 30, offset: const Offset(0, 10)),
   ];
 }

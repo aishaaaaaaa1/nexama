@@ -1,0 +1,253 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["auth", "public"]
+}
+
+enum role_type {
+  entrepreneur
+  investisseur
+  prestataire
+  formateur
+  administrateur
+
+  @@schema("auth")
+}
+
+enum statut_compte {
+  en_attente
+  actif
+  suspendu
+  supprime
+
+  @@schema("auth")
+}
+
+model utilisateurs {
+  id              String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  nom_complet     String        @db.VarChar(150)
+  email           String        @unique @db.VarChar(255)
+  mot_de_passe    String
+  telephone       String?       @db.VarChar(20)
+  avatar_url      String?
+  role            role_type
+  statut          statut_compte @default(en_attente)
+  langue          String        @default("fr") @db.Char(2)
+  ville           String?       @db.VarChar(100)
+  region          String?       @db.VarChar(100)
+  is_verified     Boolean       @default(false)
+  two_fa_secret   String?
+  created_at      DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime      @default(now()) @db.Timestamptz(6)
+  deleted_at      DateTime?     @db.Timestamptz(6)
+  
+  projets         projets[]
+  investissements investissements[]
+  messages_envoyes messages[] @relation("MessagesEnvoyes")
+  messages_recus   messages[] @relation("MessagesRecus")
+  
+  factures        factures[]
+  depenses        depenses[]
+  services        services_b2b[]
+  commandes_passees commandes_b2b[]
+  cours           cours[]
+  business_plans  business_plans[]
+  crm_deals       crm_deals[]
+  forum_posts     forum_posts[]
+  forum_replies   forum_replies[]
+  
+  @@map("utilisateurs")
+  @@schema("auth")
+}
+
+model projets {
+  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  entrepreneur_id   String   @db.Uuid
+  nom               String   @db.VarChar(255)
+  description       String
+  secteur           String   @db.VarChar(150)
+  ville             String?  @db.VarChar(100)
+  region            String?  @db.VarChar(100)
+  budget_recherche  Float
+  stade_evolution   String   @db.VarChar(50)
+  trust_score       Float    @default(0.0)
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime @default(now()) @db.Timestamptz(6)
+
+  entrepreneur      utilisateurs @relation(fields: [entrepreneur_id], references: [id], onDelete: Cascade)
+  investissements   investissements[]
+  
+  @@map("projets")
+  @@schema("public")
+}
+
+model investissements {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  projet_id       String   @db.Uuid
+  investisseur_id String   @db.Uuid
+  montant         Float
+  date_invest     DateTime @default(now()) @db.Timestamptz(6)
+  statut          String   @default("en_attente") @db.VarChar(50)
+
+  projet          projets       @relation(fields: [projet_id], references: [id], onDelete: Cascade)
+  investisseur    utilisateurs  @relation(fields: [investisseur_id], references: [id], onDelete: Cascade)
+
+  @@map("investissements")
+  @@schema("public")
+}
+
+model messages {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  expediteur_id   String   @db.Uuid
+  destinataire_id String   @db.Uuid
+  contenu         String
+  lu              Boolean  @default(false)
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+
+  expediteur      utilisateurs @relation("MessagesEnvoyes", fields: [expediteur_id], references: [id], onDelete: Cascade)
+  destinataire    utilisateurs @relation("MessagesRecus", fields: [destinataire_id], references: [id], onDelete: Cascade)
+
+  @@map("messages")
+  @@schema("public")
+}
+
+model factures {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  utilisateur_id  String   @db.Uuid
+  numero_ref      String   @unique @db.VarChar(50)
+  client_nom      String   @db.VarChar(150)
+  total_ht        Float
+  tva             Float
+  total_ttc       Float
+  statut          String   @default("en_attente") @db.VarChar(50)
+  date_emission   DateTime @default(now()) @db.Timestamptz(6)
+  date_echeance   DateTime @db.Timestamptz(6)
+
+  utilisateur     utilisateurs @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade)
+
+  @@map("factures")
+  @@schema("public")
+}
+
+model depenses {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  utilisateur_id  String   @db.Uuid
+  categorie       String   @db.VarChar(100)
+  montant         Float
+  description     String?
+  date_depense    DateTime @default(now()) @db.Timestamptz(6)
+
+  utilisateur     utilisateurs @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade)
+
+  @@map("depenses")
+  @@schema("public")
+}
+
+model services_b2b {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  prestataire_id  String   @db.Uuid
+  titre           String   @db.VarChar(255)
+  categorie       String   @db.VarChar(100)
+  prix_base       Float
+  description     String?
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+
+  prestataire     utilisateurs @relation(fields: [prestataire_id], references: [id], onDelete: Cascade)
+  commandes       commandes_b2b[]
+
+  @@map("services_b2b")
+  @@schema("public")
+}
+
+model commandes_b2b {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  service_id      String   @db.Uuid
+  client_id       String   @db.Uuid
+  montant         Float
+  statut_paiement String   @default("en_attente") @db.VarChar(50)
+  statut_livraison String  @default("en_cours") @db.VarChar(50)
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+
+  service         services_b2b @relation(fields: [service_id], references: [id], onDelete: Cascade)
+  client          utilisateurs @relation(fields: [client_id], references: [id], onDelete: Cascade)
+
+  @@map("commandes_b2b")
+  @@schema("public")
+}
+
+model cours {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  formateur_id    String   @db.Uuid
+  titre           String   @db.VarChar(255)
+  description     String?
+  prix            Float    @default(0.0)
+  format_media    String   @db.VarChar(50)
+  duree_minutes   Int
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+
+  formateur       utilisateurs @relation(fields: [formateur_id], references: [id], onDelete: Cascade)
+
+  @@map("cours")
+  @@schema("public")
+}
+
+model business_plans {
+  id                String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  utilisateur_id    String   @db.Uuid
+  nom_projet        String   @db.VarChar(255)
+  contenu_markdown  String
+  date_generation   DateTime @default(now()) @db.Timestamptz(6)
+
+  utilisateur       utilisateurs @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade)
+
+  @@map("business_plans")
+  @@schema("public")
+}
+
+model crm_deals {
+  id                  String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  utilisateur_id      String   @db.Uuid
+  nom_entreprise      String   @db.VarChar(255)
+  statut              String   @db.VarChar(50) // prospects, qualifies, devis, nego, gagne
+  montant_estime      Float    @default(0.0)
+  derniere_interaction DateTime @default(now()) @db.Timestamptz(6)
+
+  utilisateur         utilisateurs @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade)
+
+  @@map("crm_deals")
+  @@schema("public")
+}
+
+model forum_posts {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  utilisateur_id  String   @db.Uuid
+  titre           String   @db.VarChar(255)
+  contenu         String
+  categorie       String   @db.VarChar(100)
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+
+  utilisateur     utilisateurs @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade)
+  replies         forum_replies[]
+
+  @@map("forum_posts")
+  @@schema("public")
+}
+
+model forum_replies {
+  id              String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  post_id         String   @db.Uuid
+  utilisateur_id  String   @db.Uuid
+  contenu         String
+  created_at      DateTime @default(now()) @db.Timestamptz(6)
+
+  post            forum_posts @relation(fields: [post_id], references: [id], onDelete: Cascade)
+  utilisateur     utilisateurs @relation(fields: [utilisateur_id], references: [id], onDelete: Cascade)
+
+  @@map("forum_replies")
+  @@schema("public")
+}

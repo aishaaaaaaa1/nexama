@@ -167,7 +167,10 @@ classDiagram
     }
 
     class ProduitStock {
-        +String sku
+        +String skucd c:\Users\g\nexama\database
+# copier .env.example → .env et remplir les mots de passe, puis :
+docker compose --profile dev up -d
+
         +String nom
         +int quantiteDisponible
         +alerteReapprovisionnement()

@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../config/api_config.dart';
 import '../theme/app_theme.dart';
 import '../widgets/footer_section.dart';
+import '../services/auth_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -16,8 +20,7 @@ class _LoginPageState extends State<LoginPage> {
 
   bool _obscurePassword = true;
   bool _continueHovered = false;
-  bool _googleHovered = false;
-  bool _facebookHovered = false;
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -139,7 +142,7 @@ class _LoginPageState extends State<LoginPage> {
                   Image.asset(
                     'assets/images/logo.png',
                     height: 40,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorBuilder: (context, error, stackTrace) => Container(
                       width: 36, height: 36,
                       decoration: BoxDecoration(
                         gradient: const LinearGradient(colors: [NexaColors.darkNavy, NexaColors.primaryGreen]),
@@ -225,19 +228,22 @@ class _LoginPageState extends State<LoginPage> {
   Widget _buildLoginBtn() {
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.transparent,
-          border: Border.all(color: NexaColors.primaryGreen),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Text(
-          'Se connecter',
-          style: GoogleFonts.inter(
-            color: NexaColors.primaryGreen,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
+      child: GestureDetector(
+        onTap: () {}, // Already on login page, or could navigate to self
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            border: Border.all(color: NexaColors.primaryGreen),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            'Se connecter',
+            style: GoogleFonts.inter(
+              color: NexaColors.primaryGreen,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ),
@@ -520,35 +526,6 @@ class _LoginPageState extends State<LoginPage> {
           // Action Button
           _buildContinueButton(),
 
-          const SizedBox(height: 24),
-          // Divider
-          Row(
-            children: [
-              Expanded(child: Divider(color: NexaColors.border.withValues(alpha: 0.6))),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  'ou continuer avec',
-                  style: GoogleFonts.inter(
-                    color: NexaColors.textMuted,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ),
-              Expanded(child: Divider(color: NexaColors.border.withValues(alpha: 0.6))),
-            ],
-          ),
-          const SizedBox(height: 20),
-
-          // Social buttons
-          Row(
-            children: [
-              Expanded(child: _buildSocialButton('Google', _googleIcon(), _googleHovered, (v) => setState(() => _googleHovered = v))),
-              const SizedBox(width: 16),
-              Expanded(child: _buildSocialButton('Facebook', const Icon(Icons.facebook, color: Color(0xFF1877F2), size: 22), _facebookHovered, (v) => setState(() => _facebookHovered = v))),
-            ],
-          ),
           const SizedBox(height: 28),
 
           // Signup link
@@ -633,19 +610,101 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  void _handleContinue() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Connexion en cours...',
-          style: GoogleFonts.inter(fontWeight: FontWeight.w500),
-        ),
-        backgroundColor: NexaColors.primaryGreen,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        margin: const EdgeInsets.all(20),
-      ),
-    );
+  Future<void> _handleContinue() async {
+    if (_emailController.text.trim().isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Veuillez saisir votre email et mot de passe')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final response = await http.post(
+        ApiConfig.uri('/api/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': _emailController.text.trim(),
+          'mot_de_passe': _passwordController.text,
+        }),
+      );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        final user = data['user'] as Map<String, dynamic>?;
+        final token = data['token'] as String?;
+        final role = user?['role']?.toString().toLowerCase();
+
+        if (token != null && user != null) {
+          await AuthService.saveAuthData(token, user);
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Connexion réussie',
+              style: GoogleFonts.inter(fontWeight: FontWeight.w500),
+            ),
+            backgroundColor: NexaColors.primaryGreen,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            margin: const EdgeInsets.all(20),
+          ),
+        );
+
+        if (role == 'entrepreneur') {
+          Navigator.of(context).pushReplacementNamed(
+            '/dashboard/entrepreneur',
+            arguments: user,
+          );
+        } else if (role == 'investisseur') {
+          Navigator.of(context).pushReplacementNamed(
+            '/dashboard/investisseur',
+            arguments: user,
+          );
+        } else if (role == 'prestataire') {
+          Navigator.of(context).pushReplacementNamed(
+            '/dashboard/prestataire',
+            arguments: user,
+          );
+        } else if (role == 'formateur') {
+          Navigator.of(context).pushReplacementNamed(
+            '/dashboard/formateur',
+            arguments: user,
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Aucun tableau de bord configuré pour le rôle: ${role ?? 'inconnu'}'),
+            ),
+          );
+        }
+      } else {
+        String errorMessage = 'Erreur lors de la connexion';
+        try {
+          final data = jsonDecode(response.body) as Map<String, dynamic>;
+          errorMessage = data['error']?.toString() ?? errorMessage;
+        } catch (_) {
+          // Keep default fallback message when body is not JSON.
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(errorMessage)),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Impossible de contacter le serveur.')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   // ─── Continue Button ───
@@ -653,15 +712,15 @@ class _LoginPageState extends State<LoginPage> {
     return MouseRegion(
       onEnter: (_) => setState(() => _continueHovered = true),
       onExit: (_) => setState(() => _continueHovered = false),
-      cursor: SystemMouseCursors.click,
+      cursor: _isLoading ? SystemMouseCursors.basic : SystemMouseCursors.click,
       child: GestureDetector(
-        onTap: _handleContinue,
+        onTap: _isLoading ? null : _handleContinue,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
-            color: _continueHovered ? NexaColors.darkGreen : NexaColors.primaryGreen,
+            color: (_continueHovered || _isLoading) ? NexaColors.darkGreen : NexaColors.primaryGreen,
             borderRadius: BorderRadius.circular(12),
             boxShadow: _continueHovered
                 ? [BoxShadow(color: NexaColors.primaryGreen.withValues(alpha: 0.4), blurRadius: 16, offset: const Offset(0, 6))]
@@ -670,116 +729,28 @@ class _LoginPageState extends State<LoginPage> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text(
-                'Se connecter',
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontSize: 15.5,
-                  fontWeight: FontWeight.w600,
+              if (_isLoading)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                )
+              else ...[
+                Text(
+                  'Se connecter',
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.arrow_forward, size: 18, color: Colors.white),
+                const SizedBox(width: 8),
+                const Icon(Icons.arrow_forward, size: 18, color: Colors.white),
+              ]
             ],
           ),
         ),
       ),
     );
   }
-
-  // ─── Social Buttons ───
-  Widget _buildSocialButton(String label, Widget icon, bool isHovered, ValueChanged<bool> onHover) {
-    return MouseRegion(
-      onEnter: (_) => onHover(true),
-      onExit: (_) => onHover(false),
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: () {
-          // TODO: Implement social login
-        },
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            color: isHovered ? NexaColors.bgLight : Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: NexaColors.border.withValues(alpha: 0.7)),
-            boxShadow: isHovered
-                ? [BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 8, offset: const Offset(0, 2))]
-                : [],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              icon,
-              const SizedBox(width: 10),
-              Text(
-                label,
-                style: GoogleFonts.inter(
-                  color: NexaColors.darkNavy,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ─── Google Icon ───
-  Widget _googleIcon() {
-    return SizedBox(
-      width: 20,
-      height: 20,
-      child: CustomPaint(painter: _GoogleLogoPainter()),
-    );
-  }
-}
-
-// ─── Google Logo Custom Painter ───
-class _GoogleLogoPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..style = PaintingStyle.fill;
-
-    // G colors
-    const blue = Color(0xFF4285F4);
-    const red = Color(0xFFEA4335);
-    const yellow = Color(0xFFFBBC05);
-    const green = Color(0xFF34A853);
-
-    // Simplistic Google "G" logo drawing for demo purposes
-    // Using simple colored arcs and a rectangle
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2;
-
-    // Top-right Red
-    paint.color = red;
-    canvas.drawArc(Rect.fromCircle(center: center, radius: radius), -1.57, 1.57, true, paint);
-
-    // Bottom-right Yellow
-    paint.color = yellow;
-    canvas.drawArc(Rect.fromCircle(center: center, radius: radius), 0, 1.57, true, paint);
-
-    // Bottom-left Green
-    paint.color = green;
-    canvas.drawArc(Rect.fromCircle(center: center, radius: radius), 1.57, 1.57, true, paint);
-
-    // Top-left Blue
-    paint.color = blue;
-    canvas.drawArc(Rect.fromCircle(center: center, radius: radius), 3.14, 1.57, true, paint);
-
-    // Inner white circle to make it look like a ring
-    paint.color = Colors.white;
-    canvas.drawCircle(center, radius * 0.6, paint);
-
-    // Right blue bar
-    paint.color = blue;
-    canvas.drawRect(Rect.fromLTRB(center.dx, center.dy - radius * 0.3, size.width, center.dy + radius * 0.3), paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
