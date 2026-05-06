@@ -14,7 +14,7 @@ class _NavBarState extends State<NavBar> {
   bool _loginHovered = false;
   bool _signupHovered = false;
 
-  final _menu = ['Accueil', 'À propos', 'Fonctionnalités', 'Pour qui ?', 'Tarifs', 'Ressources'];
+  final _menu = ['Accueil', 'À propos', 'Fonctionnalités', 'Pour qui ?', 'Ressources'];
 
   @override
   Widget build(BuildContext context) {

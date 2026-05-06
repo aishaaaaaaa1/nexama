@@ -6,6 +6,7 @@ import '../services/auth_service.dart';
 import '../widgets/chatbot_widget.dart';
 import 'login_page.dart';
 import 'investisseur/projets_decouvrir.dart';
+import 'investisseur/matching_swipe_page.dart';
 import 'investisseur/mes_investissements.dart';
 import 'investisseur/messages_page.dart';
 import 'investisseur/favoris.dart';
@@ -15,7 +16,10 @@ import 'investisseur/documents.dart';
 import 'investisseur/alertes.dart';
 import 'investisseur/parametres_page.dart';
 
+import 'shared/support_page.dart';
+import 'profile_page.dart';
 import 'shared/premium_upgrade_page.dart';
+import '../widgets/notifications_panel.dart';
 
 class InvestisseurDashboard extends StatefulWidget {
   final Map<String, dynamic>? userData;
@@ -28,6 +32,7 @@ class InvestisseurDashboard extends StatefulWidget {
 class _InvestisseurDashboardState extends State<InvestisseurDashboard> {
   final ScrollController _scrollController = ScrollController();
   int _selectedNav = 0;
+  bool _isSidebarCollapsed = false;
 
   @override
   Widget build(BuildContext context) {
@@ -37,21 +42,24 @@ class _InvestisseurDashboardState extends State<InvestisseurDashboard> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            margin: const EdgeInsets.only(right: 12, bottom: 8),
-            decoration: BoxDecoration(
-              color: NexaColors.darkNavy,
-              borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16), bottomLeft: Radius.circular(16), bottomRight: Radius.circular(4)),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
-            ),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Besoin d\'aide ?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                Text('Discutez avec NexaBot', style: TextStyle(color: Colors.white70, fontSize: 11)),
-              ],
+          GestureDetector(
+            onTap: () => setState(() => _selectedNav = 8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              margin: const EdgeInsets.only(right: 12, bottom: 8),
+              decoration: BoxDecoration(
+                color: NexaColors.darkNavy,
+                borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16), bottomLeft: Radius.circular(16), bottomRight: Radius.circular(4)),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Besoin d\'aide ?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                  Text('Contactez le support', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                ],
+              ),
             ),
           ),
           Stack(
@@ -101,21 +109,27 @@ class _InvestisseurDashboardState extends State<InvestisseurDashboard> {
 
   // ────────────── SIDEBAR ──────────────
   Widget _buildSidebar() {
-    return Container(
-      width: 250,
+    return AnimatedContainer(
+      key: const ValueKey('sidebar_investisseur'),
+      duration: const Duration(milliseconds: 300),
+      width: _isSidebarCollapsed ? 0 : 250,
+      clipBehavior: Clip.hardEdge,
       decoration: const BoxDecoration(color: Colors.white, border: Border(right: BorderSide(color: Color(0xFFE2E8F0)))),
       child: Column(
         children: [
           Padding(
             padding: const EdgeInsets.all(24),
             child: Row(
+              mainAxisAlignment: _isSidebarCollapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
               children: [
                 Image.asset('assets/images/logo.png', height: 32, errorBuilder: (c, e, s) => const Icon(Icons.error, color: Colors.red)),
-                const SizedBox(width: 12),
-                RichText(text: TextSpan(children: [
-                  TextSpan(text: 'Nexa', style: GoogleFonts.inter(color: NexaColors.darkNavy, fontSize: 20, fontWeight: FontWeight.w800)),
-                  TextSpan(text: 'Ma', style: GoogleFonts.inter(color: NexaColors.primaryGreen, fontSize: 20, fontWeight: FontWeight.w800)),
-                ])),
+                if (!_isSidebarCollapsed) ...[
+                  const SizedBox(width: 12),
+                  RichText(text: TextSpan(children: [
+                    TextSpan(text: 'Nexa', style: GoogleFonts.inter(color: NexaColors.darkNavy, fontSize: 20, fontWeight: FontWeight.w800)),
+                    TextSpan(text: 'Ma', style: GoogleFonts.inter(color: NexaColors.primaryGreen, fontSize: 20, fontWeight: FontWeight.w800)),
+                  ])),
+                ],
               ],
             ),
           ),
@@ -123,7 +137,7 @@ class _InvestisseurDashboardState extends State<InvestisseurDashboard> {
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: _isSidebarCollapsed ? CrossAxisAlignment.center : CrossAxisAlignment.start,
                 children: [
                   _buildNavItem(0, Icons.trending_up, 'Tableau de bord'),
                   _buildNavItem(1, Icons.explore_outlined, 'Projets à découvrir'),
@@ -133,61 +147,38 @@ class _InvestisseurDashboardState extends State<InvestisseurDashboard> {
                   _buildNavItem(5, Icons.analytics_outlined, 'Analyses & Rapports'),
                   _buildNavItem(6, Icons.account_balance_wallet_outlined, 'Portefeuille'),
                   _buildNavItem(7, Icons.description_outlined, 'Documents'),
-                  _buildNavItem(8, Icons.notifications_none_outlined, 'Alertes', badge: '2', badgeColor: Colors.orange),
-                  _buildNavItem(9, Icons.settings_outlined, 'Paramètres'),
+                  _buildNavItem(8, Icons.headset_mic_outlined, 'Support'),
+                  _buildNavItem(9, Icons.notifications_none_outlined, 'Alertes', badge: '2', badgeColor: Colors.orange),
+                  _buildNavItem(10, Icons.settings_outlined, 'Paramètres'),
                   const SizedBox(height: 16),
                   _buildLogoutItem(),
                 ],
               ),
             ),
           ),
-          // Premium Promo
-          Container(
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: const Color(0xFFF1F8F1), borderRadius: BorderRadius.circular(12)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Boostez vos\ninvestissements', style: GoogleFonts.inter(color: NexaColors.darkNavy, fontSize: 14, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 8),
-                Text('Accédez à des projets exclusifs et à des analyses avancées.', style: GoogleFonts.inter(color: const Color(0xFF64748B), fontSize: 11, height: 1.4)),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => PremiumUpgradePage(userData: widget.userData)));
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: NexaColors.primaryGreen,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                    ),
-                    child: const Text('Passer au Premium 🚀'),
-                  ),
-                ),
-              ],
-            ),
-          ),
           // Support User
-          const Padding(
-            padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
-            child: Row(
-              children: [
-                Icon(Icons.headset_mic_outlined, color: Color(0xFF64748B), size: 20),
-                SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          if (!_isSidebarCollapsed)
+            InkWell(
+              onTap: () => setState(() => _selectedNav = 8),
+              child: const Padding(
+                padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
+                child: Row(
                   children: [
-                    Text('Besoin d\'aide ?', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                    Text('Contactez le support', style: TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+                    Icon(Icons.headset_mic_outlined, color: Color(0xFF64748B), size: 20),
+                    SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Besoin d\'aide ?', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                        Text('Contactez le support', style: TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+                      ],
+                    ),
                   ],
                 ),
-              ],
+              ),
             ),
-          ),
+          if (_isSidebarCollapsed)
+            IconButton(onPressed: () => setState(() => _selectedNav = 8), icon: const Icon(Icons.headset_mic_outlined, color: Color(0xFF64748B))),
         ],
       ),
     );
@@ -238,13 +229,15 @@ class _InvestisseurDashboardState extends State<InvestisseurDashboard> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(color: isSelected ? const Color(0xFFE8F5E9) : Colors.transparent, borderRadius: BorderRadius.circular(8)),
         child: Row(
+          mainAxisAlignment: _isSidebarCollapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
           children: [
             Icon(icon, size: 20, color: isSelected ? NexaColors.primaryGreen : const Color(0xFF64748B)),
-            const SizedBox(width: 12),
-            Text(label, style: GoogleFonts.inter(color: isSelected ? NexaColors.primaryGreen : const Color(0xFF475569), fontSize: 13, fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500)),
-            if (badge != null) ...[
-              const Spacer(),
-              Container(padding: const EdgeInsets.all(5), decoration: BoxDecoration(color: badgeColor, shape: BoxShape.circle), child: Text(badge, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))),
+            if (!_isSidebarCollapsed) ...[
+              const SizedBox(width: 12),
+              Expanded(child: Text(label, style: GoogleFonts.inter(color: isSelected ? NexaColors.primaryGreen : const Color(0xFF475569), fontSize: 13, fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500))),
+              if (badge != null) ...[
+                Container(padding: const EdgeInsets.all(5), decoration: BoxDecoration(color: badgeColor, shape: BoxShape.circle), child: Text(badge, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))),
+              ]
             ]
           ],
         ),
@@ -260,52 +253,97 @@ class _InvestisseurDashboardState extends State<InvestisseurDashboard> {
       decoration: const BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0)))),
       child: Row(
         children: [
-          const Icon(Icons.menu, color: Color(0xFF64748B)),
-          const SizedBox(width: 24),
-          Container(
-            width: 350,
-            height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(8)),
-            child: Row(
-              children: [
-                const Icon(Icons.search, color: Color(0xFF94A3B8), size: 18),
-                const SizedBox(width: 8),
-                Expanded(child: Text('Rechercher un projet, entrepreneur...', style: GoogleFonts.inter(color: const Color(0xFF94A3B8), fontSize: 13))),
-                Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4)), child: const Text('⌘K', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.bold))),
-              ],
+          Material(
+            color: Colors.transparent,
+            child: IconButton(
+              icon: Icon(_isSidebarCollapsed ? Icons.menu_open : Icons.menu, color: const Color(0xFF64748B)),
+              onPressed: () => setState(() => _isSidebarCollapsed = !_isSidebarCollapsed),
+              splashRadius: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Container(
+              height: 40,
+              constraints: const BoxConstraints(maxWidth: 400),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(8)),
+              child: Row(
+                children: [
+                  const Icon(Icons.search, color: Color(0xFF94A3B8), size: 18),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      decoration: InputDecoration(
+                        hintText: _isSidebarCollapsed ? 'Rechercher...' : 'Rechercher un projet, un entrepreneur...',
+                        hintStyle: GoogleFonts.inter(color: const Color(0xFF94A3B8), fontSize: 13),
+                        border: InputBorder.none,
+                        isDense: true,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           const Spacer(),
-          Stack(
-            children: [
-              const Icon(Icons.notifications_none, color: Color(0xFF64748B), size: 24),
-              Positioned(right: 0, top: 0, child: Container(padding: const EdgeInsets.all(3), decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle), child: const Text('3', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)))),
-            ],
+          IconButton(
+            icon: const Icon(Icons.notifications_none, color: Color(0xFF64748B)),
+            onPressed: () => _showNotifications(context),
           ),
-          const SizedBox(width: 20),
-          const Icon(Icons.chat_bubble_outline, color: Color(0xFF64748B), size: 22),
-          const SizedBox(width: 24),
-          Row(
-            children: [
-              const CircleAvatar(
-                radius: 16,
-                backgroundColor: Color(0xFFE2E8F0),
-                child: Icon(Icons.person, color: Color(0xFF64748B), size: 20),
-              ),
-              const SizedBox(width: 10),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(_getFirstName(), style: GoogleFonts.inter(color: NexaColors.darkNavy, fontSize: 13, fontWeight: FontWeight.w600)),
-                  Text('Investisseur', style: GoogleFonts.inter(color: const Color(0xFF64748B), fontSize: 11)),
-                ],
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.keyboard_arrow_down, color: Color(0xFF64748B), size: 18),
-            ],
-          )
+          const SizedBox(width: 12),
+          InkWell(
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => ProfilePage(userData: widget.userData))),
+            child: Row(
+              children: [
+                const CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Color(0xFFE2E8F0),
+                  child: Icon(Icons.person, color: Color(0xFF64748B), size: 20),
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_getFirstName(), style: GoogleFonts.inter(color: NexaColors.darkNavy, fontSize: 13, fontWeight: FontWeight.w600)),
+                    Text('Investisseur', style: GoogleFonts.inter(color: const Color(0xFF64748B), fontSize: 11)),
+                  ],
+                ),
+                const SizedBox(width: 8),
+                const Icon(Icons.keyboard_arrow_down, color: Color(0xFF64748B), size: 18),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showNotifications(BuildContext context) {
+    final RenderBox button = context.findRenderObject() as RenderBox;
+    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final RelativeRect position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        button.localToGlobal(Offset.zero, ancestor: overlay),
+        button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.transparent,
+      builder: (context) => Stack(
+        children: [
+          Positioned(
+            top: position.top + 60,
+            right: 24,
+            child: Material(
+              color: Colors.transparent,
+              child: NotificationsPanel(userId: widget.userData?['id'] ?? ''),
+            ),
+          ),
         ],
       ),
     );
@@ -316,7 +354,7 @@ class _InvestisseurDashboardState extends State<InvestisseurDashboard> {
       case 0:
         return _buildMainContent();
       case 1:
-        return ProjetsDecouvrirPage(userData: widget.userData);
+        return MatchingSwipePage(userData: widget.userData);
       case 2:
         return MesInvestissementsPage(userData: widget.userData);
       case 3:
@@ -330,8 +368,10 @@ class _InvestisseurDashboardState extends State<InvestisseurDashboard> {
       case 7:
         return DocumentsPage(userData: widget.userData);
       case 8:
-        return AlertesPage(userData: widget.userData);
+        return SupportPage(userData: widget.userData);
       case 9:
+        return AlertesPage(userData: widget.userData);
+      case 10:
         return ParametresPage(userData: widget.userData);
       default:
         return _buildMainContent();

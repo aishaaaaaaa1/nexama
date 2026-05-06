@@ -180,7 +180,7 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   List<Widget> _buildNavItems() {
-    final items = ['Accueil', 'À propos', 'Fonctionnalités', 'Pour qui ?', 'Tarifs', 'Ressources'];
+    final items = ['Accueil', 'À propos', 'Fonctionnalités', 'Pour qui ?', 'Ressources'];
     return items.map((label) {
       final hasArrow = label == 'Ressources';
       return MouseRegion(
@@ -504,23 +504,6 @@ class _LoginPageState extends State<LoginPage> {
             obscure: _obscurePassword,
             toggleObscure: () => setState(() => _obscurePassword = !_obscurePassword),
           ),
-          const SizedBox(height: 12),
-          
-          // Mot de passe oublié
-          Align(
-            alignment: Alignment.centerRight,
-            child: MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: Text(
-                'Mot de passe oublié ?',
-                style: GoogleFonts.inter(
-                  color: NexaColors.primaryGreen,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
           const SizedBox(height: 28),
 
           // Action Button
@@ -673,6 +656,11 @@ class _LoginPageState extends State<LoginPage> {
         } else if (role == 'formateur') {
           Navigator.of(context).pushReplacementNamed(
             '/dashboard/formateur',
+            arguments: user,
+          );
+        } else if (role == 'administrateur') {
+          Navigator.of(context).pushReplacementNamed(
+            '/dashboard/admin',
             arguments: user,
           );
         } else {

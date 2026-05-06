@@ -20,6 +20,9 @@ import 'prestataire/parametres_page.dart';
 import 'prestataire/marketplace_page.dart';
 import 'investisseur/messages_page.dart';
 import 'shared/premium_upgrade_page.dart';
+import '../widgets/notifications_panel.dart';
+import 'shared/support_page.dart';
+import 'profile_page.dart';
 import 'formateur/quiz_evaluations_page.dart';
 import 'formateur/lives_webinaires_page.dart';
 import 'formateur/apprenants_page.dart';
@@ -35,6 +38,7 @@ class PrestataireDashboard extends StatefulWidget {
 class _PrestataireDashboardState extends State<PrestataireDashboard> {
   final ScrollController _scrollController = ScrollController();
   int _selectedNav = 0;
+  bool _isSidebarCollapsed = false;
 
   @override
   Widget build(BuildContext context) {
@@ -44,21 +48,24 @@ class _PrestataireDashboardState extends State<PrestataireDashboard> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            margin: const EdgeInsets.only(right: 12, bottom: 8),
-            decoration: BoxDecoration(
-              color: NexaColors.darkNavy,
-              borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16), bottomLeft: Radius.circular(16), bottomRight: Radius.circular(4)),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
-            ),
-            child: const Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Besoin d\'aide ?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                Text('Contactez le support', style: TextStyle(color: Colors.white70, fontSize: 11)),
-              ],
+          GestureDetector(
+            onTap: () => setState(() => _selectedNav = 18),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              margin: const EdgeInsets.only(right: 12, bottom: 8),
+              decoration: BoxDecoration(
+                color: NexaColors.darkNavy,
+                borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16), bottomLeft: Radius.circular(16), bottomRight: Radius.circular(4)),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Besoin d\'aide ?', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                  Text('Contactez le support', style: TextStyle(color: Colors.white70, fontSize: 11)),
+                ],
+              ),
             ),
           ),
           Stack(
@@ -108,21 +115,27 @@ class _PrestataireDashboardState extends State<PrestataireDashboard> {
 
   // ────────────── SIDEBAR ──────────────
   Widget _buildSidebar() {
-    return Container(
-      width: 250,
+    return AnimatedContainer(
+      key: const ValueKey('sidebar_prestataire'),
+      duration: const Duration(milliseconds: 300),
+      width: _isSidebarCollapsed ? 0 : 250,
+      clipBehavior: Clip.hardEdge,
       decoration: const BoxDecoration(color: Colors.white, border: Border(right: BorderSide(color: Color(0xFFE2E8F0)))),
       child: Column(
         children: [
           Padding(
             padding: const EdgeInsets.all(24),
             child: Row(
+              mainAxisAlignment: _isSidebarCollapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
               children: [
                 Image.asset('assets/images/logo.png', height: 32, errorBuilder: (c, e, s) => const Icon(Icons.error, color: Colors.blue)),
-                const SizedBox(width: 12),
-                RichText(text: TextSpan(children: [
-                  TextSpan(text: 'Nexa', style: GoogleFonts.inter(color: NexaColors.darkNavy, fontSize: 20, fontWeight: FontWeight.w800)),
-                  TextSpan(text: 'Ma', style: GoogleFonts.inter(color: NexaColors.primaryGreen, fontSize: 20, fontWeight: FontWeight.w800)),
-                ])),
+                if (!_isSidebarCollapsed) ...[
+                  const SizedBox(width: 12),
+                  RichText(text: TextSpan(children: [
+                    TextSpan(text: 'Nexa', style: GoogleFonts.inter(color: NexaColors.darkNavy, fontSize: 20, fontWeight: FontWeight.w800)),
+                    TextSpan(text: 'Ma', style: GoogleFonts.inter(color: NexaColors.primaryGreen, fontSize: 20, fontWeight: FontWeight.w800)),
+                  ])),
+                ],
               ],
             ),
           ),
@@ -130,83 +143,65 @@ class _PrestataireDashboardState extends State<PrestataireDashboard> {
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: _isSidebarCollapsed ? CrossAxisAlignment.center : CrossAxisAlignment.start,
                 children: [
                   _buildNavItem(0, Icons.trending_up, 'Tableau de bord'),
-                  _buildNavItem(1, Icons.explore_outlined, 'Découvrir (Marketplace)'),
-                  const Padding(padding: EdgeInsets.only(left: 12, top: 16, bottom: 8), child: Text('ACTIVITÉ', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold))),
-                  _buildNavItem(2, Icons.business_center_outlined, 'Mes services'),
-                  _buildNavItem(3, Icons.shopping_bag_outlined, 'Commandes', badge: '8', badgeColor: NexaColors.primaryGreen),
-                  _buildNavItem(4, Icons.chat_bubble_outline, 'Messages', badge: '5', badgeColor: NexaColors.primaryGreen),
-                  _buildNavItem(5, Icons.star_border_outlined, 'Avis & évaluations'),
-                  _buildNavItem(6, Icons.camera_alt_outlined, 'Portfolio'),
-                  _buildNavItem(7, Icons.calendar_today_outlined, 'Disponibilités'),
-                  const Padding(padding: EdgeInsets.only(left: 12, top: 16, bottom: 8), child: Text('FORMATION', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold))),
+                  if (!_isSidebarCollapsed) const Padding(padding: EdgeInsets.only(left: 12, top: 16, bottom: 8), child: Text('SERVICES', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold))),
+                  _buildNavItem(1, Icons.business_center_outlined, 'Mes commandes'),
+                  _buildNavItem(2, Icons.add_circle_outline, 'Nouveau service'),
+                  _buildNavItem(3, Icons.inventory_2_outlined, 'Mes services'),
+                  if (!_isSidebarCollapsed) const Padding(padding: EdgeInsets.only(left: 12, top: 16, bottom: 8), child: Text('MATCHING', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold))),
+                  _buildNavItem(4, Icons.handshake_outlined, 'Matching IA'),
+                  _buildNavItem(5, Icons.chat_bubble_outline, 'Messages', badge: '5', badgeColor: NexaColors.primaryGreen),
+                  if (!_isSidebarCollapsed) const Padding(padding: EdgeInsets.only(left: 12, top: 16, bottom: 8), child: Text('OUTILS', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold))),
+                  _buildNavItem(6, Icons.description_outlined, 'Mes devis'),
+                  _buildNavItem(7, Icons.receipt_long_outlined, 'Facturation'),
+                  if (!_isSidebarCollapsed) const Padding(padding: EdgeInsets.only(left: 12, top: 16, bottom: 8), child: Text('PROJET', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold))),
+                  _buildNavItem(8, Icons.track_changes_outlined, 'Suivi de projet'),
+                  _buildNavItem(9, Icons.event_note_outlined, 'Planning'),
+                  if (!_isSidebarCollapsed) const Padding(padding: EdgeInsets.only(left: 12, top: 16, bottom: 8), child: Text('CRM', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold))),
+                  _buildNavItem(10, Icons.people_outline, 'Mes clients'),
+                  _buildNavItem(11, Icons.star_border_outlined, 'Avis clients'),
+                  if (!_isSidebarCollapsed) const Padding(padding: EdgeInsets.only(left: 12, top: 16, bottom: 8), child: Text('FINANCES', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold))),
+                  _buildNavItem(12, Icons.analytics_outlined, 'Statistiques'),
+                  _buildNavItem(13, Icons.account_balance_wallet_outlined, 'Revenus'),
+                  if (!_isSidebarCollapsed) const Padding(padding: EdgeInsets.only(left: 12, top: 16, bottom: 8), child: Text('APPRENTISSAGE', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold))),
+                  _buildNavItem(14, Icons.school_outlined, 'Micro-Learning'),
                   _buildNavItem(15, Icons.quiz_outlined, 'Quiz & Évaluations'),
-                  _buildNavItem(16, Icons.video_call_outlined, 'Lives & Webinaires'),
-                  _buildNavItem(17, Icons.people_outline, 'Mes Apprenants'),
-                  const Padding(padding: EdgeInsets.only(left: 12, top: 16, bottom: 8), child: Text('GESTION', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold))),
-                  _buildNavItem(8, Icons.account_balance_wallet_outlined, 'Revenus'),
-                  _buildNavItem(9, Icons.swap_horiz, 'Transactions'),
-                  _buildNavItem(10, Icons.view_kanban_outlined, 'Pipeline CRM'),
-                  _buildNavItem(11, Icons.description_outlined, 'Documents'),
-                  const Padding(padding: EdgeInsets.only(left: 12, top: 16, bottom: 8), child: Text('PARAMÈTRES', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold))),
-                  _buildNavItem(12, Icons.person_outline, 'Profil public'),
-                  _buildNavItem(13, Icons.settings_outlined, 'Paramètres'),
-                  _buildNavItem(14, Icons.card_membership, 'Abonnements'),
+                  _buildNavItem(16, Icons.videocam_outlined, 'Lives & Webinaires'),
+                  _buildNavItem(17, Icons.people_alt_outlined, 'Mes apprenants'),
+                  if (!_isSidebarCollapsed) const Padding(padding: EdgeInsets.only(left: 12, top: 16, bottom: 8), child: Text('PARAMÈTRES', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold))),
+                  _buildNavItem(19, Icons.person_outline, 'Mon profil'),
+                  _buildNavItem(20, Icons.settings_outlined, 'Configuration'),
                   const SizedBox(height: 16),
                   _buildLogoutItem(),
                 ],
               ),
             ),
           ),
-          // Premium Promo
-          Container(
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(color: const Color(0xFFF1F8F1), borderRadius: BorderRadius.circular(12)),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Développez votre activité', style: GoogleFonts.inter(color: NexaColors.darkNavy, fontSize: 14, fontWeight: FontWeight.w800)),
-                const SizedBox(height: 8),
-                Text('Passez au plan Premium pour plus de visibilité et d\'outils avancés.', style: GoogleFonts.inter(color: const Color(0xFF64748B), fontSize: 11, height: 1.4)),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => PremiumUpgradePage(userData: widget.userData)));
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: NexaColors.primaryGreen,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                    ),
-                    child: const Text('Passer au Premium 🚀'),
-                  ),
-                ),
-              ],
-            ),
-          ),
           // Support User
-          const Padding(
-            padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
-            child: Row(
-              children: [
-                Icon(Icons.headset_mic_outlined, color: Color(0xFF64748B), size: 20),
-                SizedBox(width: 12),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          if (!_isSidebarCollapsed)
+            InkWell(
+              onTap: () => setState(() => _selectedNav = 18),
+              child: const Padding(
+                padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
+                child: Row(
                   children: [
-                    Text('Besoin d\'aide ?', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                    Text('Contactez le support', style: TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+                    Icon(Icons.headset_mic_outlined, color: Color(0xFF64748B), size: 20),
+                    SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Besoin d\'aide ?', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                        Text('Contactez le support', style: TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+                      ],
+                    ),
                   ],
                 ),
-              ],
+              ),
             ),
-          ),
+          if (_isSidebarCollapsed)
+            IconButton(onPressed: () => setState(() => _selectedNav = 18), icon: const Icon(Icons.headset_mic_outlined, color: Color(0xFF64748B))),
         ],
       ),
     );
@@ -232,15 +227,17 @@ class _PrestataireDashboardState extends State<PrestataireDashboard> {
         child: Row(
           children: [
             const Icon(Icons.logout, size: 20, color: Colors.redAccent),
-            const SizedBox(width: 12),
-            Text(
-              'Déconnexion',
-              style: GoogleFonts.inter(
-                color: Colors.redAccent,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+            if (!_isSidebarCollapsed) ...[
+              const SizedBox(width: 12),
+              Text(
+                'Déconnexion',
+                style: GoogleFonts.inter(
+                  color: Colors.redAccent,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -257,13 +254,15 @@ class _PrestataireDashboardState extends State<PrestataireDashboard> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(color: isSelected ? const Color(0xFFE8F5E9) : Colors.transparent, borderRadius: BorderRadius.circular(8)),
         child: Row(
+          mainAxisAlignment: _isSidebarCollapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
           children: [
             Icon(icon, size: 20, color: isSelected ? NexaColors.primaryGreen : const Color(0xFF64748B)),
-            const SizedBox(width: 12),
-            Text(label, style: GoogleFonts.inter(color: isSelected ? NexaColors.primaryGreen : const Color(0xFF475569), fontSize: 13, fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500)),
-            if (badge != null) ...[
-              const Spacer(),
-              Container(padding: const EdgeInsets.all(5), decoration: BoxDecoration(color: badgeColor, shape: BoxShape.circle), child: Text(badge, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))),
+            if (!_isSidebarCollapsed) ...[
+              const SizedBox(width: 12),
+              Expanded(child: Text(label, style: GoogleFonts.inter(color: isSelected ? NexaColors.primaryGreen : const Color(0xFF475569), fontSize: 13, fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500))),
+              if (badge != null) ...[
+                Container(padding: const EdgeInsets.all(5), decoration: BoxDecoration(color: badgeColor, shape: BoxShape.circle), child: Text(badge, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold))),
+              ]
             ]
           ],
         ),
@@ -276,55 +275,107 @@ class _PrestataireDashboardState extends State<PrestataireDashboard> {
     return Container(
       height: 70,
       padding: const EdgeInsets.symmetric(horizontal: 24),
-      decoration: const BoxDecoration(color: Colors.white, border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0)))),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+      ),
       child: Row(
         children: [
-          const Icon(Icons.menu, color: Color(0xFF64748B)),
-          const SizedBox(width: 24),
+          Material(
+            color: Colors.transparent,
+            child: IconButton(
+              icon: Icon(_isSidebarCollapsed ? Icons.menu_open : Icons.menu, color: const Color(0xFF64748B)),
+              onPressed: () => setState(() => _isSidebarCollapsed = !_isSidebarCollapsed),
+              splashRadius: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
           Container(
             width: 350,
             height: 40,
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(8)),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF1F5F9),
+              borderRadius: BorderRadius.circular(8),
+            ),
             child: Row(
               children: [
                 const Icon(Icons.search, color: Color(0xFF94A3B8), size: 18),
                 const SizedBox(width: 8),
-                Expanded(child: Text('Rechercher un service, une commande...', style: GoogleFonts.inter(color: const Color(0xFF94A3B8), fontSize: 13))),
-                Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4)), child: const Text('⌘K', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.bold))),
+                Expanded(
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: _isSidebarCollapsed ? 'Rechercher...' : 'Rechercher un service, un expert...',
+                      hintStyle: GoogleFonts.inter(color: const Color(0xFF94A3B8), fontSize: 13),
+                      border: InputBorder.none,
+                      isDense: true,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
           const Spacer(),
-          Stack(
-            children: [
-              const Icon(Icons.notifications_none, color: Color(0xFF64748B), size: 24),
-              Positioned(right: 0, top: 0, child: Container(padding: const EdgeInsets.all(3), decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle), child: const Text('3', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)))),
-            ],
+          IconButton(
+            icon: const Icon(Icons.notifications_none, color: Color(0xFF64748B)),
+            onPressed: () => _showNotifications(context),
           ),
-          const SizedBox(width: 20),
-          const Icon(Icons.chat_bubble_outline, color: Color(0xFF64748B), size: 22),
-          const SizedBox(width: 24),
-          Row(
-            children: [
-              const CircleAvatar(
-                radius: 16,
-                backgroundColor: Color(0xFFE2E8F0),
-                child: Icon(Icons.person, color: Color(0xFF64748B), size: 20),
-              ),
-              const SizedBox(width: 10),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(_getFirstName(), style: GoogleFonts.inter(color: NexaColors.darkNavy, fontSize: 13, fontWeight: FontWeight.w600)),
-                  Text('Prestataire', style: GoogleFonts.inter(color: const Color(0xFF64748B), fontSize: 11)),
-                ],
-              ),
-              const SizedBox(width: 8),
-              const Icon(Icons.keyboard_arrow_down, color: Color(0xFF64748B), size: 18),
-            ],
-          )
+          const SizedBox(width: 12),
+          InkWell(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => ProfilePage(userData: widget.userData)),
+            ),
+            child: Row(
+              children: [
+                const CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Color(0xFFE2E8F0),
+                  child: Icon(Icons.person, color: Color(0xFF64748B), size: 20),
+                ),
+                const SizedBox(width: 10),
+                Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(_getFirstName(), style: GoogleFonts.inter(color: NexaColors.darkNavy, fontSize: 13, fontWeight: FontWeight.w600)),
+                    Text('Prestataire', style: GoogleFonts.inter(color: const Color(0xFF64748B), fontSize: 11)),
+                  ],
+                ),
+                const SizedBox(width: 8),
+                const Icon(Icons.keyboard_arrow_down, color: Color(0xFF64748B), size: 18),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showNotifications(BuildContext context) {
+    final RenderBox button = context.findRenderObject() as RenderBox;
+    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final RelativeRect position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        button.localToGlobal(Offset.zero, ancestor: overlay),
+        button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.transparent,
+      builder: (context) => Stack(
+        children: [
+          Positioned(
+            top: position.top + 60,
+            right: 24,
+            child: Material(
+              color: Colors.transparent,
+              child: NotificationsPanel(userId: widget.userData?['id'] ?? ''),
+            ),
+          ),
         ],
       ),
     );
@@ -350,6 +401,7 @@ class _PrestataireDashboardState extends State<PrestataireDashboard> {
       case 15: return QuizEvaluationsPage(userData: widget.userData);
       case 16: return LivesWebinairesPage(userData: widget.userData);
       case 17: return ApprenantsFormateurPage(userData: widget.userData);
+      case 18: return SupportPage(userData: widget.userData);
       default: return _buildMainContent();
     }
   }

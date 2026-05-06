@@ -1,6 +1,7 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { verifyToken } = require('../utils/authMiddleware');
+const { logAction } = require('../utils/auditLogger');
 const router = express.Router();
 const prisma = new PrismaClient();
 
@@ -167,6 +168,23 @@ router.get('/lives/:id', async (req, res) => {
     { id: 1, titre: "Atelier : Pitcher son projet", date: "20 Mai 2024", heure: "18:00", inscrits: 12 },
     { id: 2, titre: "Q&A : Statut Auto-Entrepreneur", date: "25 Mai 2024", heure: "14:30", inscrits: 25 },
   ]);
+});
+
+// ==========================================
+// 9. Premium
+// ==========================================
+router.post('/premium', async (req, res) => {
+  try {
+    const { plan } = req.body;
+    const user = await prisma.utilisateurs.update({
+      where: { id: req.user.id },
+      data: { is_verified: true }
+    });
+    await logAction(req.user.id, 'PREMIUM_UPGRADE', `Passage au plan ${plan} (Prestataire)`);
+    res.json({ message: `Passage au plan ${plan} réussi !`, user });
+  } catch (error) {
+    res.status(500).json({ error: "Erreur lors du passage au premium" });
+  }
 });
 
 module.exports = router;

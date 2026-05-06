@@ -40,7 +40,7 @@ class _StockPageState extends State<StockPage> with SingleTickerProviderStateMix
       if (response.statusCode == 200) {
         if (mounted) {
           setState(() {
-            _stocks = json.decode(response.body);
+            _stocks = json.decode(response.body) ?? [];
             _isLoading = false;
           });
         }
@@ -66,6 +66,7 @@ class _StockPageState extends State<StockPage> with SingleTickerProviderStateMix
   @override
   Widget build(BuildContext context) {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_stocks == null) return const Center(child: Text('Aucune donnée de stock disponible.'));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -260,7 +261,7 @@ class _StockPageState extends State<StockPage> with SingleTickerProviderStateMix
   }
 
   Widget _buildAlertBadge() {
-    int lowCount = _stocks.where((s) => s['quantite'] < s['seuil_min']).length;
+    int lowCount = _stocks.where((s) => (s['quantite'] ?? 0) < (s['seuil_min'] ?? 0)).length;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(color: Colors.red.withOpacity(0.1), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.red.withOpacity(0.3))),

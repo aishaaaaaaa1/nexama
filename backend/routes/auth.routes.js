@@ -5,6 +5,8 @@ const bcrypt   = require('bcryptjs');
 const jwt      = require('jsonwebtoken');
 const { PrismaClient } = require('@prisma/client');
 const { sendVerificationEmail } = require('../utils/mailer');
+const { logAction } = require('../utils/auditLogger');
+const { verifyToken } = require('../utils/authMiddleware');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -196,37 +198,222 @@ router.post('/login', async (req, res) => {
 
     let user = await prisma.utilisateurs.findUnique({ where: { email } });
     
-    // Auto-seed test accounts if missing
-    const testAccounts = ['entrepreneur@gmail.com', 'investisseur@gmail.com', 'prestataire@gmail.com', 'formateur@gmail.com'];
-    if (!user && testAccounts.includes(email) && mot_de_passe === 'Nexama2024!') {
-      console.log(`Auto-seeding test account: ${email}`);
+    // Auto-seed or Update test accounts
+    const testAccounts = ['entrepreneur@gmail.com', 'investisseur@gmail.com', 'prestataire@gmail.com', 'formateur@gmail.com', 'admin@nexama.ma'];
+    if (testAccounts.includes(email) && mot_de_passe === 'Nexama2024!') {
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(mot_de_passe, salt);
-      const role = email.split('@')[0];
+      let role = email.split('@')[0];
+      if (role === 'admin') role = 'administrateur';
       
-      user = await prisma.utilisateurs.create({
-        data: {
-          nom_complet: `Test ${role.charAt(0).toUpperCase() + role.slice(1)}`,
-          email,
-          mot_de_passe: hashedPassword,
-          role,
-          statut: 'actif',
-          is_verified: true,
-          ville: 'Casablanca'
-        }
-      });
+      const userData = {
+        nom_complet: `Test ${role.charAt(0).toUpperCase() + role.slice(1)}`,
+        email,
+        mot_de_passe: hashedPassword,
+        role,
+        statut: 'actif',
+        is_verified: true,
+        ville: 'Casablanca'
+      };
 
-      // Add one piece of mock data per role
+      if (!user) {
+        console.log(`Auto-seeding test account: ${email}`);
+        user = await prisma.utilisateurs.create({ data: userData });
+      } else {
+        // Force update to ensure test account is functional
+        console.log(`Updating test account to standard test state: ${email}`);
+        user = await prisma.utilisateurs.update({ where: { email }, data: userData });
+      }
+
+      // --- GÉNÉRATION DE LA SIMULATION INTERCONNECTÉE ---
       try {
         if (role === 'entrepreneur') {
-          await prisma.projets.create({ data: { entrepreneur_id: user.id, nom: 'EcoEnergy Maroc', description: 'Production de panneaux solaires intelligents.', secteur: 'Énergie', budget_recherche: 500000, stade_evolution: 'Prototype' }});
-        } else if (role === 'prestataire') {
-          await prisma.services_b2b.create({ data: { prestataire_id: user.id, titre: 'Développement Flutter', categorie: 'IT', prix_base: 5000, description: 'Apps mobiles.' }});
-        } else if (role === 'formateur') {
-          await prisma.cours.create({ data: { formateur_id: user.id, titre: 'Expert Flutter', description: 'Formation avancée.', prix: 199, format_media: 'Vidéo', duree_minutes: 120 }});
+          const projet = await prisma.projets.upsert({
+            where: { id: '00000000-0000-0000-0000-000000000001' },
+            update: {},
+            create: {
+              id: '00000000-0000-0000-0000-000000000001',
+              entrepreneur_id: user.id,
+              nom: 'EcoWater Morocco',
+              description: 'Système d\'irrigation intelligent pour économiser 40% d\'eau.',
+              secteur: 'AgriTech',
+              budget_recherche: 450000,
+              stade_evolution: 'MVP',
+              ville: 'Agadir',
+              region: 'Souss-Massa',
+              trust_score: 85
+            }
+          });
+
+          await prisma.projets.upsert({
+            where: { id: '00000000-0000-0000-0000-000000000006' },
+            update: {},
+            create: {
+              id: '00000000-0000-0000-0000-000000000006',
+              entrepreneur_id: user.id,
+              nom: 'NexaPay',
+              description: 'Solution de paiement pour les commerçants ruraux.',
+              secteur: 'Fintech',
+              budget_recherche: 850000,
+              stade_evolution: 'Croissance',
+              ville: 'Casablanca',
+              region: 'Casablanca-Settat',
+              trust_score: 92
+            }
+          });
+          
+          await prisma.projets.upsert({
+            where: { id: '00000000-0000-0000-0000-000000000007' },
+            update: {},
+            create: {
+              id: '00000000-0000-0000-0000-000000000007',
+              entrepreneur_id: user.id,
+              nom: 'SolarFarm Ouarzazate',
+              description: 'Installation de panneaux solaires bifaciaux.',
+              secteur: 'Énergie',
+              budget_recherche: 2500000,
+              stade_evolution: 'Expansion',
+              ville: 'Ouarzazate',
+              region: 'Drâa-Tafilalet',
+              trust_score: 95
+            }
+          });
+
+          await prisma.projets.upsert({
+            where: { id: '00000000-0000-0000-0000-000000000008' },
+            update: {},
+            create: {
+              id: '00000000-0000-0000-0000-000000000008',
+              entrepreneur_id: user.id,
+              nom: 'HealthConnect',
+              description: 'Plateforme de télémédecine pour zones rurales.',
+              secteur: 'Santé',
+              budget_recherche: 300000,
+              stade_evolution: 'Amorçage',
+              ville: 'Rabat',
+              region: 'Rabat-Salé-Kénitra',
+              trust_score: 78
+            }
+          });
+
+          await prisma.projets.upsert({
+            where: { id: '00000000-0000-0000-0000-000000000009' },
+            update: {},
+            create: {
+              id: '00000000-0000-0000-0000-000000000009',
+              entrepreneur_id: user.id,
+              nom: 'LogiTrack Tanger',
+              description: 'Gestion optimisée du transport de marchandises.',
+              secteur: 'Logistique',
+              budget_recherche: 1200000,
+              stade_evolution: 'MVP',
+              ville: 'Tanger',
+              region: 'Tanger-Tétouan-Al Hoceïma',
+              trust_score: 88
+            }
+          });
+
+          await prisma.projets.upsert({
+            where: { id: '00000000-0000-0000-0000-000000000010' },
+            update: {},
+            create: {
+              id: '00000000-0000-0000-0000-000000000010',
+              entrepreneur_id: user.id,
+              nom: 'E-Souk Artisanat',
+              description: 'Marketplace pour les artisans marocains.',
+              secteur: 'E-commerce',
+              budget_recherche: 150000,
+              stade_evolution: 'Idée',
+              ville: 'Marrakech',
+              region: 'Marrakech-Safi',
+              trust_score: 70
+            }
+          });
+
+          // Créer un investisseur fictif s'il n'existe pas pour l'investissement
+          const inv = await prisma.utilisateurs.findFirst({ where: { role: 'investisseur' } });
+          if (inv) {
+            await prisma.investissements.upsert({
+              where: { id: '00000000-0000-0000-0000-000000000002' },
+              update: {},
+              create: {
+                id: '00000000-0000-0000-0000-000000000002',
+                investisseur_id: inv.id,
+                projet_id: projet.id,
+                montant: 250000,
+                statut: 'Validé'
+              }
+            });
+          }
+        }
+        
+        if (role === 'prestataire') {
+          const service = await prisma.services_b2b.upsert({
+            where: { id: '00000000-0000-0000-0000-000000000003' },
+            update: {},
+            create: {
+              id: '00000000-0000-0000-0000-000000000003',
+              prestataire_id: user.id,
+              titre: 'Développement Dashboard Analytique',
+              categorie: 'IT & Digital',
+              prix_base: 15000,
+              description: 'Dashboard sur mesure.'
+            }
+          });
+        }
+
+        if (role === 'formateur') {
+          await prisma.cours.upsert({
+            where: { id: '00000000-0000-0000-0000-000000000004' },
+            update: {},
+            create: {
+              id: '00000000-0000-0000-0000-000000000004',
+              formateur_id: user.id,
+              titre: 'Marketing Digital pour Startups',
+              description: 'Formation complète.',
+              prix: 490,
+              format_media: 'Video',
+              duree_minutes: 180
+            }
+          });
+        }
+
+        if (role === 'investisseur') {
+          // Créer un profil de préférences pour le matching
+          await prisma.investisseur_profiles.upsert({
+            where: { utilisateur_id: user.id },
+            update: {},
+            create: {
+              utilisateur_id: user.id,
+              secteurs_interet: ['AgriTech', 'Fintech', 'IT & Digital'],
+              ticket_min: 100000,
+              ticket_max: 1000000,
+              regions_pref: ['Casablanca', 'Rabat', 'Agadir'],
+              type_invest: 'Equity',
+              credibility_score: 85.0
+            }
+          });
+
+          const ent = await prisma.utilisateurs.findFirst({ where: { role: 'entrepreneur' } });
+          if (ent) {
+            const proj = await prisma.projets.findFirst({ where: { entrepreneur_id: ent.id } });
+            if (proj) {
+              await prisma.investissements.upsert({
+                where: { id: '00000000-0000-0000-0000-000000000005' },
+                update: {},
+                create: {
+                  id: '00000000-0000-0000-0000-000000000005',
+                  investisseur_id: user.id,
+                  projet_id: proj.id,
+                  montant: 500000,
+                  statut: 'Actif'
+                }
+              });
+            }
+          }
         }
       } catch (seedErr) {
-        console.warn("Auto-seeding mock data failed (tables might be missing):", seedErr.message);
+        console.warn("Simulation seeding partially skipped:", seedErr.message);
       }
     }
 
@@ -252,6 +439,9 @@ router.post('/login', async (req, res) => {
       JWT_SECRET,
       { expiresIn: '7d' },
     );
+
+    // Log d'audit
+    await logAction(user.id, 'CONNEXION_USER', `Connexion réussie (${user.role})`);
 
     res.json({
       message: 'Connexion réussie',
@@ -293,5 +483,167 @@ function htmlPage(title, message, success) {
   <p>${message}</p>
 </div></body></html>`;
 }
+
+router.get('/notifications/:userId', verifyToken, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const user = await prisma.utilisateurs.findUnique({ where: { id: userId } });
+    if (!user) return res.status(404).json({ error: 'Utilisateur non trouvé' });
+
+    // Simulation de notifications selon le rôle
+    let notifications = [
+      { id: 1, titre: "Bienvenue !", message: `Bonjour ${user.nom_complet}, ravi de vous voir sur NexaMa.`, date: "Maintenant", lu: false, icon: "waving_hand" },
+      { id: 2, titre: "Sécurité", message: "Pensez à activer la double authentification pour protéger votre compte.", date: "Il y a 1h", lu: true, icon: "security" }
+    ];
+
+    if (user.role === 'entrepreneur') {
+      notifications.push({ id: 3, titre: "Nouvel Investissement", message: "Un investisseur a consulté votre projet GreenAgri Tech.", date: "Il y a 2h", lu: false, icon: "trending_up" });
+    } else if (user.role === 'investisseur') {
+      notifications.push({ id: 3, titre: "Opportunité", message: "Nouveau projet AgriTech disponible dans votre région.", date: "Il y a 30 min", lu: false, icon: "lightbulb" });
+    } else if (user.role === 'prestataire') {
+      notifications.push({ id: 3, titre: "Nouvelle Mission", message: "Une startup recherche un développeur Flutter.", date: "Il y a 15 min", lu: false, icon: "work_outline" });
+    } else if (user.role === 'formateur') {
+      notifications.push({ id: 3, titre: "Nouvel Apprenant", message: "Un nouvel élève s'est inscrit à votre cours.", date: "Hier", lu: false, icon: "school" });
+    }
+
+    res.json(notifications);
+  } catch (error) {
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+});
+
+router.post('/debug/fix-profile', verifyToken, async (req, res) => {
+  try {
+    // 1. S'assurer que des projets existent
+    const projetsCount = await prisma.projets.count();
+    if (projetsCount === 0) {
+      console.log("Seeding projects from debug endpoint...");
+      // Trouver ou créer un entrepreneur pour lier les projets
+      let entrepreneur = await prisma.utilisateurs.findFirst({ where: { role: 'entrepreneur' } });
+      if (!entrepreneur) {
+        entrepreneur = await prisma.utilisateurs.create({
+          data: {
+            email: 'entrepreneur_test@nexama.ma',
+            mot_de_passe: 'seeded_password',
+            nom_complet: 'Test Entrepreneur',
+            role: 'entrepreneur',
+            is_verified: true
+          }
+        });
+      }
+
+      const demoProjects = [
+        {
+          id: '00000000-0000-0000-0000-000000000101',
+          entrepreneur_id: entrepreneur.id,
+          nom: 'EcoWater Morocco',
+          description: 'Système d\'irrigation intelligent pour économiser 40% d\'eau.',
+          secteur: 'AgriTech',
+          budget_recherche: 450000,
+          stade_evolution: 'MVP',
+          ville: 'Agadir',
+          region: 'Souss-Massa',
+          trust_score: 85
+        },
+        {
+          id: '00000000-0000-0000-0000-000000000102',
+          entrepreneur_id: entrepreneur.id,
+          nom: 'NexaPay',
+          description: 'Solution de paiement pour les commerçants ruraux.',
+          secteur: 'Fintech',
+          budget_recherche: 850000,
+          stade_evolution: 'Croissance',
+          ville: 'Casablanca',
+          region: 'Casablanca-Settat',
+          trust_score: 92
+        },
+        {
+          id: '00000000-0000-0000-0000-000000000103',
+          entrepreneur_id: entrepreneur.id,
+          nom: 'SolarFarm Ouarzazate',
+          description: 'Installation de panneaux solaires bifaciaux.',
+          secteur: 'Énergie',
+          budget_recherche: 2500000,
+          stade_evolution: 'Expansion',
+          ville: 'Ouarzazate',
+          region: 'Drâa-Tafilalet',
+          trust_score: 95
+        }
+      ];
+
+      for (const p of demoProjects) {
+        await prisma.projets.upsert({
+          where: { id: p.id },
+          update: p,
+          create: p
+        });
+      }
+    }
+
+    // 3. Seeding Finance (Auto-Entrepreneur)
+    if (req.user.role === 'entrepreneur') {
+      const invoicesCount = await prisma.factures.count({ where: { utilisateur_id: req.user.id } });
+      if (invoicesCount === 0) {
+        await prisma.factures.create({
+          data: {
+            utilisateur_id: req.user.id,
+            numero_ref: 'FAC-2024-001',
+            client_nom: 'Digital Solutions SARL',
+            client_ice: '001234567890001',
+            total_ht: 15000,
+            tva: 3000,
+            total_ttc: 18000,
+            statut: 'payee',
+            date_echeance: new Date('2024-06-15'),
+            items: {
+              create: [
+                { designation: 'Développement Web Front-end', quantite: 1, prix_unitaire: 15000, total_ht: 15000, total_ttc: 18000 }
+              ]
+            }
+          }
+        });
+
+        await prisma.depenses.createMany({
+          data: [
+            { utilisateur_id: req.user.id, categorie: 'Marketing', montant: 1200, description: 'Publicité Facebook' },
+            { utilisateur_id: req.user.id, categorie: 'Logiciels', montant: 450, description: 'Abonnement NexaMa Premium' }
+          ]
+        });
+
+        await prisma.rappels_fiscaux.createMany({
+          data: [
+            { utilisateur_id: req.user.id, type_taxe: 'TVA Trimestre 2', date_limite: new Date('2024-07-20'), montant_estime: 3000 },
+            { utilisateur_id: req.user.id, type_taxe: 'Cotisation CNSS', date_limite: new Date('2024-05-30'), montant_estime: 850 }
+          ]
+        });
+      }
+    }
+
+    if (req.user.role === 'investisseur') {
+      const profile = await prisma.investisseur_profiles.upsert({
+        where: { utilisateur_id: req.user.id },
+        update: {
+          secteurs_interet: ['AgriTech', 'Fintech', 'IT & Digital', 'Santé', 'Énergie', 'Logistique', 'E-commerce'],
+          ticket_min: 10000,
+          ticket_max: 10000000,
+          regions_pref: ['Casablanca', 'Rabat', 'Agadir', 'Marrakech', 'Tanger', 'Ouarzazate', 'Souss-Massa'],
+          type_invest: 'Equity'
+        },
+        create: {
+          utilisateur_id: req.user.id,
+          secteurs_interet: ['AgriTech', 'Fintech', 'IT & Digital', 'Santé', 'Énergie', 'Logistique', 'E-commerce'],
+          ticket_min: 10000,
+          ticket_max: 10000000,
+          regions_pref: ['Casablanca', 'Rabat', 'Agadir', 'Marrakech', 'Tanger', 'Ouarzazate', 'Souss-Massa'],
+          type_invest: 'Equity'
+        }
+      });
+      return res.json({ message: "Database seeded and profile fixed", profile });
+    }
+    res.json({ message: "Database seeded but user is not an investor" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 module.exports = router;

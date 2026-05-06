@@ -55,7 +55,7 @@ class _DepensesPageState extends State<DepensesPage> {
     }
   }
 
-  void _simulateBankImport() {
+  Future<void> _scanReceiptWithAI() async {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -65,24 +65,42 @@ class _DepensesPageState extends State<DepensesPage> {
           children: [
             CircularProgressIndicator(),
             SizedBox(height: 16),
-            Text("Import du relevé bancaire en cours..."),
-            Text("Catégorisation automatique par l'IA...", style: TextStyle(fontSize: 10, color: Colors.grey)),
+            Text("Analyse du reçu par l'IA Gemini..."),
+            Text("Extraction du montant et de la catégorie...", style: TextStyle(fontSize: 10, color: Colors.grey)),
           ],
         ),
       ),
     );
 
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        Navigator.pop(context); // close loading
-        setState(() {
-          _depenses.insert(0, {'titre': 'Abonnement Adobe', 'categorie': 'Logiciels', 'montant': 600, 'date_depense': 'Aujourd\'hui'});
-          _depenses.insert(0, {'titre': 'Carburant', 'categorie': 'Transport', 'montant': 450, 'date_depense': 'Aujourd\'hui'});
-          _depenses.insert(0, {'titre': 'Achat Fournitures', 'categorie': 'Achats', 'montant': 1200, 'date_depense': 'Hier'});
-          _calculateTotals(_depenses);
-        });
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('3 dépenses importées et catégorisées avec succès.'), backgroundColor: Colors.green));
+    try {
+      // Simulation d'une image base64 pour la démo
+      // Dans une app réelle, on utiliserait ImagePicker
+      final response = await ApiService.post(
+        ApiConfig.uri('/api/finance/expenses/parse'),
+        body: {'image': 'BASE64_IMAGE_DATA_HERE'} 
+      );
+
+      if (mounted) Navigator.pop(context);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        _showAddDepenseDialog(
+          initialTitre: data['titre'],
+          initialMontant: data['montant']?.toString(),
+          initialCategory: data['categorie'],
+        );
       }
+    } catch (e) {
+      if (mounted) Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Erreur lors du scan IA.')));
+    }
+  }
+
+  void _simulateBankImport() {
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Import bancaire simulé avec succès.')));
+    setState(() {
+      _depenses.insert(0, {'titre': 'Achat matériel informatique', 'categorie': 'Achats', 'montant': 4500, 'date_depense': DateTime.now().toIso8601String()});
+      _calculateTotals(_depenses);
     });
   }
 
@@ -113,7 +131,14 @@ class _DepensesPageState extends State<DepensesPage> {
                 ),
                 const SizedBox(width: 12),
                 ElevatedButton.icon(
-                  onPressed: _showAddDepenseDialog,
+                  onPressed: _scanReceiptWithAI,
+                  icon: const Icon(Icons.auto_awesome, size: 18),
+                  label: const Text('Scanner avec IA'),
+                  style: ElevatedButton.styleFrom(backgroundColor: NexaColors.primaryGreen, foregroundColor: Colors.white),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  onPressed: () => _showAddDepenseDialog(),
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('Nouvelle Dépense'),
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
@@ -217,10 +242,10 @@ class _DepensesPageState extends State<DepensesPage> {
     );
   }
 
-  void _showAddDepenseDialog() {
-    final titreController = TextEditingController();
-    final montantController = TextEditingController();
-    String selectedCategory = 'Achats';
+  void _showAddDepenseDialog({String? initialTitre, String? initialMontant, String? initialCategory}) {
+    final titreController = TextEditingController(text: initialTitre);
+    final montantController = TextEditingController(text: initialMontant);
+    String selectedCategory = initialCategory ?? 'Achats';
 
     showDialog(
       context: context,
@@ -249,16 +274,15 @@ class _DepensesPageState extends State<DepensesPage> {
               if (titreController.text.isEmpty || montantController.text.isEmpty) return;
               
               final body = {
-                'utilisateur_id': widget.userData?['id'] ?? 'user_123',
                 'titre': titreController.text,
                 'montant': double.tryParse(montantController.text) ?? 0,
                 'categorie': selectedCategory,
+                'date_depense': DateTime.now().toIso8601String(),
               };
 
               final response = await ApiService.post(
-                ApiConfig.uri('/api/entrepreneur/depenses'),
-                headers: {'Content-Type': 'application/json'},
-                body: json.encode(body),
+                ApiConfig.uri('/api/finance/expenses'),
+                body: body,
               );
 
               if (response.statusCode == 201) {

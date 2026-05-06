@@ -2,6 +2,7 @@ const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const https = require('https');
 const { verifyToken } = require('../utils/authMiddleware');
+const { logAction } = require('../utils/auditLogger');
 const router = express.Router();
 const prisma = new PrismaClient();
 
@@ -123,23 +124,38 @@ router.get('/projets/:id', async (req, res) => {
 
 router.post('/projets', async (req, res) => {
   try {
-    const { entrepreneur_id, nom, description, secteur, budget_recherche, stade_evolution, ville } = req.body;
+    const { 
+      nom, description, secteur, budget_recherche, 
+      stade_evolution, ville, description_detaillee, 
+      pdf_url, video_url, equipe_taille, equipe_profils 
+    } = req.body;
     
-    if (!entrepreneur_id || !nom || !secteur || !budget_recherche) {
+    if (!nom || !secteur || !budget_recherche) {
       return res.status(400).json({ error: "Champs obligatoires manquants" });
     }
 
     const nouveauProjet = await prisma.projets.create({
       data: {
-        entrepreneur_id,
+        entrepreneur_id: req.user.id,
         nom,
         description: description || "",
         secteur,
         ville: ville || "",
         budget_recherche: parseFloat(budget_recherche),
-        stade_evolution: stade_evolution || "Idée"
+        stade_evolution: stade_evolution || "Idée",
+        description_detaillee: description_detaillee || null,
+        pdf_url: pdf_url || null,
+        video_url: video_url || null,
+        equipe_taille: parseInt(equipe_taille) || 1,
+        equipe_profils: equipe_profils || null
       }
     });
+
+    await logAction(req.user.id, 'PROJET_CREATION', `Création du projet: ${nom}`);
+    
+    // Mettre à jour le Trust Score de l'entrepreneur
+    const MatchingService = require('../services/matching.service');
+    await MatchingService.updateTrustScore(req.user.id);
     
     res.status(201).json(nouveauProjet);
   } catch (error) {
@@ -784,6 +800,25 @@ router.post('/projet/notifications/deadline', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: "Erreur lors de la notification" });
+  }
+});
+
+// ==========================================
+// 10. Premium
+// ==========================================
+router.post('/premium', async (req, res) => {
+  try {
+    const { plan } = req.body;
+    // En production, on vérifierait le paiement ici
+    const user = await prisma.utilisateurs.update({
+      where: { id: req.user.id },
+      data: { is_verified: true } // On simule l'avantage premium par is_verified ou un autre champ
+    });
+    await logAction(req.user.id, 'PREMIUM_UPGRADE', `Passage au plan ${plan} (Entrepreneur)`);
+    res.json({ message: `Passage au plan ${plan} réussi !`, user });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erreur lors du passage au premium" });
   }
 });
 

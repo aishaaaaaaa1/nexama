@@ -199,7 +199,7 @@ class _SignupPageState extends State<SignupPage> {
   }
 
   List<Widget> _buildNavItems() {
-    final items = ['Accueil', 'À propos', 'Fonctionnalités', 'Pour qui ?', 'Tarifs', 'Ressources'];
+    final items = ['Accueil', 'À propos', 'Fonctionnalités', 'Pour qui ?', 'Ressources'];
     return items.map((label) {
       final hasArrow = label == 'Ressources';
       return _NavItem(

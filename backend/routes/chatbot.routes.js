@@ -2,7 +2,12 @@ const express = require('express');
 const https = require('https');
 const router = express.Router();
 
-// ==========================================
+// --- Monitoring IA en temps réel (mémoire) ---
+global.aiStats = global.aiStats || {
+  gemini: { nom: 'Google Gemini 2.0 Flash', requetes: 0, latence_totale: 0, erreurs: 0, dernier_statut: 'Online' },
+  local: { nom: 'NexaBot Local Engine', requetes: 0, latence_totale: 0, erreurs: 0, dernier_statut: 'Online' },
+  recentQueries: []
+};
 // Base de connaissances NexaBot intégrée
 // ==========================================
 const knowledgeBase = [
@@ -45,6 +50,14 @@ const knowledgeBase = [
   // NexaMa / Plateforme
   { keywords: ['nexama', 'plateforme', 'fonctionnalités', 'comment ça marche'],
     reply: "## NexaMa — Votre Écosystème Digital 🚀\n\n**10 modules intégrés :**\n\n1. 🤝 **Matching Investisseurs**\n2. 📊 **Dashboard Gestion**\n3. 🛒 **Marketplace B2B**\n4. 📋 **CRM**\n5. 🎓 **Micro-Learning**\n6. 🤖 **Assistant IA**\n7. 👥 **Gestion RH**\n8. 💰 **Simulateur Financement**\n9. 💬 **Forum**\n10. 📜 **Base Documentaire**" },
+
+  // Support / Contact
+  { keywords: ['support', 'contact', 'aide', 'assistance', 'problème', 'bug', 'question', 'joindre'],
+    reply: "## Centre d'Assistance NexaMa 🎧\n\nBesoin d'aide ? Vous pouvez nous contacter par :\n\n- 📧 **Email** : support@nexama.ma\n- 💬 **WhatsApp** : +212 6 00 00 00 00\n- 🕒 **Horaires** : Lun - Ven, 9h00 - 18h00\n\n👉 Vous pouvez aussi accéder au **Centre d'aide** complet dans votre menu de navigation pour envoyer un message direct à notre équipe." },
+
+  // FAQ spécifique
+  { keywords: ['modifier', 'profil', 'données', 'sécurité', 'investisseur', 'paiement', 'délais'],
+    reply: "## Foire Aux Questions (FAQ) 💡\n\n- **Profil** : Modifiez vos infos dans Paramètres > Mon profil.\n- **Sécurité** : Vos données sont cryptées de bout en bout et hébergées au Maroc 🇲🇦.\n- **Investisseurs** : Utilisez le module Matching pour les contacter.\n- **Paiements** : Traités sous 3 à 5 jours ouvrés.\n\nBesoin de plus de détails ? Tapez 'contact' pour joindre un humain !" },
 ];
 
 function findBestResponse(message) {
@@ -72,6 +85,7 @@ function findBestResponse(message) {
 // POST /api/chatbot
 // ==========================================
 router.post('/', async (req, res) => {
+  const startTime = Date.now();
   try {
     const { message, history } = req.body;
     if (!message) return res.status(400).json({ error: 'Message requis' });
@@ -82,6 +96,7 @@ router.post('/', async (req, res) => {
       try {
         const systemContext = `Tu es NexaBot, un assistant IA polyvalent intégré à NexaMa. Réponds à TOUTES les questions. Réponds en français, sois concis, formate en markdown.`;
         const contents = [];
+        // ... (history logic)
         if (history && Array.isArray(history) && history.length > 0) {
           for (const msg of history) {
             contents.push({ role: msg.role === 'user' ? 'user' : 'model', parts: [{ text: msg.text }] });
@@ -112,17 +127,44 @@ router.post('/', async (req, res) => {
           request.end();
         });
 
+        const duration = Date.now() - startTime;
+        global.aiStats.gemini.requetes++;
+        global.aiStats.gemini.latence_totale += duration;
+
         if (apiResponse.status === 200) {
           const data = JSON.parse(apiResponse.body);
           const reply = data.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (reply) return res.json({ reply });
+          if (reply) {
+            global.aiStats.gemini.dernier_statut = 'Stable';
+            return res.json({ reply });
+          }
+        } else {
+          global.aiStats.gemini.erreurs++;
+          global.aiStats.gemini.dernier_statut = 'Error';
         }
       } catch (err) {
         console.error('Gemini error:', err.message);
+        global.aiStats.gemini.erreurs++;
+        global.aiStats.gemini.dernier_statut = 'Down';
       }
     }
 
+    // Fallback local
+    const durationLocal = Date.now() - startTime;
+    global.aiStats.local.requetes++;
+    global.aiStats.local.latence_totale += durationLocal;
+    
     const localReply = findBestResponse(message);
+    
+    // Log recent query
+    global.aiStats.recentQueries.unshift({
+      timestamp: new Date(),
+      query: message.length > 50 ? message.substring(0, 50) + '...' : message,
+      source: localReply ? 'Local Knowledge' : 'Gemini 2.0',
+      latency: Date.now() - startTime
+    });
+    if (global.aiStats.recentQueries.length > 10) global.aiStats.recentQueries.pop();
+
     if (localReply) return res.json({ reply: localReply });
 
     res.json({ reply: "Je suis NexaBot ! Posez-moi une question sur la fiscalité, la création d'entreprise ou l'utilisation de NexaMa." });

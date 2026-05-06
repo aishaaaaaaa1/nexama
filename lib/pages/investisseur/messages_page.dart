@@ -4,6 +4,7 @@ import '../../theme/app_theme.dart';
 import '../../services/api_service.dart';
 import '../../config/api_config.dart';
 import 'dart:convert';
+import '../shared/chat_page.dart';
 
 class MessagesPage extends StatefulWidget {
   final Map<String, dynamic>? userData;
@@ -15,26 +16,31 @@ class MessagesPage extends StatefulWidget {
 
 class _MessagesPageState extends State<MessagesPage> {
   bool _isLoading = true;
-  List<dynamic> _messages = [];
+  List<dynamic> _conversations = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchMessages();
+    _fetchConversations();
   }
 
-  Future<void> _fetchMessages() async {
+  Future<void> _fetchConversations() async {
     try {
-      final userId = widget.userData?['id'] ?? 'user_123';
-      final response = await ApiService.get(ApiConfig.uri('/api/invest/messages/$userId'));
-      if (response.statusCode == 200) {
+      final response = await ApiService.get(ApiConfig.uri('/api/messages/conversations'));
+      if (response.statusCode == 200 && mounted) {
         setState(() {
-          _messages = json.decode(response.body);
+          _conversations = json.decode(response.body);
+          // Décoder Base64
+          for (var c in _conversations) {
+            try {
+              c['lastMessage'] = utf8.decode(base64.decode(c['lastMessage']));
+            } catch (_) {}
+          }
           _isLoading = false;
         });
       }
     } catch (e) {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -49,33 +55,34 @@ class _MessagesPageState extends State<MessagesPage> {
         const SizedBox(height: 8),
         Text('Échanges sécurisés avec les entrepreneurs et l\'administration.', style: TextStyle(color: Colors.grey[600])),
         const SizedBox(height: 24),
-        if (_messages.isEmpty)
-          const Center(child: Text("Aucun message trouvé.", style: TextStyle(color: Colors.grey)))
+        if (_conversations.isEmpty)
+          const Center(child: Padding(padding: EdgeInsets.all(40), child: Text("Aucune conversation trouvée.", style: TextStyle(color: Colors.grey))))
         else
           Expanded(
             child: ListView.separated(
-              itemCount: _messages.length,
+              itemCount: _conversations.length,
               separatorBuilder: (c, i) => const Divider(height: 1),
               itemBuilder: (context, index) {
-                final m = _messages[index];
+                final c = _conversations[index];
+                final user = c['user'];
                 return ListTile(
                   contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   leading: CircleAvatar(
                     backgroundColor: NexaColors.primaryGreen.withOpacity(0.1),
-                    child: Text(m['expediteur'][0], style: const TextStyle(color: NexaColors.primaryGreen, fontWeight: FontWeight.bold)),
+                    child: Text(user['nom_complet']?[0] ?? '?', style: const TextStyle(color: NexaColors.primaryGreen, fontWeight: FontWeight.bold)),
                   ),
                   title: Row(
                     children: [
-                      Text(m['expediteur'] ?? 'Inconnu', style: const TextStyle(fontWeight: FontWeight.bold)),
-                      if (!(m['lu'] ?? true))
+                      Text(user['nom_complet'] ?? 'Inconnu', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      if (c['unread'] == true)
                         Container(margin: const EdgeInsets.only(left: 8), width: 8, height: 8, decoration: const BoxDecoration(color: NexaColors.primaryGreen, shape: BoxShape.circle)),
                     ],
                   ),
-                  subtitle: Text(m['texte'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis),
-                  trailing: Text(m['date'] ?? '', style: const TextStyle(color: Colors.grey, fontSize: 11)),
-                  onTap: () {
-                    setState(() => m['lu'] = true);
-                    _showConversationDialog(m);
+                  subtitle: Text(c['lastMessage'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis),
+                  trailing: Text('Auj.', style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                  onTap: () async {
+                    await Navigator.push(context, MaterialPageRoute(builder: (_) => ChatPage(otherUser: user, userData: widget.userData)));
+                    _fetchConversations();
                   },
                 );
               },

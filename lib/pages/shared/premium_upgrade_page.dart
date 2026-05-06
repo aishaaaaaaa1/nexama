@@ -15,9 +15,9 @@ class PremiumUpgradePage extends StatelessWidget {
       
       // Determine the correct endpoint based on role
       String endpoint = '/api/entrepreneur/premium';
-      if (role == 'investisseur') endpoint = '/api/invest/premium/$userId';
-      if (role == 'prestataire') endpoint = '/api/prestataire/premium/$userId';
-      if (role == 'formateur') endpoint = '/api/formateur/premium/$userId';
+      if (role == 'investisseur') endpoint = '/api/invest/premium';
+      if (role == 'prestataire') endpoint = '/api/prestataire/premium';
+      if (role == 'formateur') endpoint = '/api/formateur/premium';
 
       final response = await ApiService.post(
         ApiConfig.uri(endpoint),

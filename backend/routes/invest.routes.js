@@ -1,6 +1,7 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { verifyToken } = require('../utils/authMiddleware');
+const { logAction } = require('../utils/auditLogger');
 const router = express.Router();
 const prisma = new PrismaClient();
 
@@ -90,9 +91,15 @@ router.post('/recharge/:id', async (req, res) => {
   }
 });
 
-router.post('/premium/:id', async (req, res) => {
+router.post('/premium', async (req, res) => {
   try {
-    res.json({ message: "Passage au premium réussi !", plan: "Premium Gold" });
+    const { plan } = req.body;
+    const user = await prisma.utilisateurs.update({
+      where: { id: req.user.id },
+      data: { is_verified: true }
+    });
+    await logAction(req.user.id, 'PREMIUM_UPGRADE', `Passage au plan ${plan} (Investisseur)`);
+    res.json({ message: "Passage au premium réussi !", plan, user });
   } catch (error) {
     res.status(500).json({ error: "Erreur serveur" });
   }

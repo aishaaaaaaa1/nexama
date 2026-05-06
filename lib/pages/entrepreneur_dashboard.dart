@@ -7,23 +7,26 @@ import '../widgets/chatbot_widget.dart';
 import 'entrepreneur/factures_page.dart';
 import 'entrepreneur/depenses_page.dart';
 import 'login_page.dart';
-import 'entrepreneur/projets_page.dart';
-import 'entrepreneur/tresorerie_page.dart';
-import 'entrepreneur/rh_page.dart';
-import 'entrepreneur/stock_page.dart';
-import 'entrepreneur/comptabilite_page.dart';
-import 'entrepreneur/business_plan_ia_page.dart';
+import './entrepreneur/projets_page.dart';
+import './entrepreneur/investisseurs_search_page.dart';
+import './investisseur/messages_page.dart';
+import './entrepreneur/finance/finance_dashboard.dart';
+import './entrepreneur/business_plan_ia_page.dart';
+import './entrepreneur/tresorerie_page.dart';
+import './entrepreneur/comptabilite_page.dart';
+import './entrepreneur/rh_page.dart';
+import './entrepreneur/stock_page.dart';
 import 'entrepreneur/crm_page.dart';
 import 'entrepreneur/suivi_projets_page.dart';
-import 'entrepreneur/marketplace_b2b_page.dart';
+import 'entrepreneur/marketplace/marketplace_explorer.dart';
 import 'entrepreneur/microlearning_page.dart';
-import 'entrepreneur/investisseurs_search_page.dart';
-import 'investisseur/messages_page.dart';
-import 'entrepreneur/simulateur_page.dart';
 import 'entrepreneur/forum_page.dart';
+import 'entrepreneur/simulateur_page.dart';
 import 'entrepreneur/base_legale_page.dart';
 import 'profile_page.dart';
-import 'shared/premium_upgrade_page.dart';
+import 'shared/support_page.dart';
+import 'trainer/trainer_dashboard_page.dart';
+import '../widgets/notifications_panel.dart';
 
 class EntrepreneurDashboard extends StatefulWidget {
   final Map<String, dynamic>? userData;
@@ -36,6 +39,7 @@ class EntrepreneurDashboard extends StatefulWidget {
 class _EntrepreneurDashboardState extends State<EntrepreneurDashboard> {
   final ScrollController _scrollController = ScrollController();
   int _selectedNav = 0;
+  bool _isSidebarCollapsed = false;
 
   @override
   Widget build(BuildContext context) {
@@ -49,9 +53,7 @@ class _EntrepreneurDashboardState extends State<EntrepreneurDashboard> {
       body: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Sidebar
           _buildSidebar(),
-          // Main Body
           Expanded(
             child: Column(
               children: [
@@ -70,10 +72,12 @@ class _EntrepreneurDashboardState extends State<EntrepreneurDashboard> {
     );
   }
 
-  // ────────────── LOGO & SIDEBAR ──────────────
   Widget _buildSidebar() {
-    return Container(
-      width: 250,
+    return AnimatedContainer(
+      key: const ValueKey('sidebar_container'),
+      duration: const Duration(milliseconds: 300),
+      width: _isSidebarCollapsed ? 0 : 260,
+      clipBehavior: Clip.hardEdge,
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(right: BorderSide(color: Color(0xFFE2E8F0))),
@@ -83,26 +87,28 @@ class _EntrepreneurDashboardState extends State<EntrepreneurDashboard> {
           Padding(
             padding: const EdgeInsets.all(24),
             child: Row(
+              mainAxisAlignment: _isSidebarCollapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
               children: [
                 Image.asset(
                   'assets/images/logo.png',
                   height: 32,
-                  errorBuilder: (context, error, stackTrace) =>
-                      const Icon(Icons.error, color: Colors.red),
+                  errorBuilder: (c, e, s) => const Icon(Icons.error, color: Colors.blue),
                 ),
-                const SizedBox(width: 12),
-                RichText(
-                  text: TextSpan(children: [
-                    TextSpan(
-                      text: 'Nexa',
-                      style: GoogleFonts.inter(color: NexaColors.darkNavy, fontSize: 20, fontWeight: FontWeight.w800),
-                    ),
-                    TextSpan(
-                      text: 'Ma',
-                      style: GoogleFonts.inter(color: NexaColors.primaryGreen, fontSize: 20, fontWeight: FontWeight.w800),
-                    ),
-                  ]),
-                ),
+                if (!_isSidebarCollapsed) ...[
+                  const SizedBox(width: 12),
+                  RichText(
+                    text: TextSpan(children: [
+                      TextSpan(
+                        text: 'Nexa',
+                        style: GoogleFonts.inter(color: NexaColors.darkNavy, fontSize: 20, fontWeight: FontWeight.w800),
+                      ),
+                      TextSpan(
+                        text: 'Ma',
+                        style: GoogleFonts.inter(color: NexaColors.primaryGreen, fontSize: 20, fontWeight: FontWeight.w800),
+                      ),
+                    ]),
+                  ),
+                ],
               ],
             ),
           ),
@@ -111,7 +117,7 @@ class _EntrepreneurDashboardState extends State<EntrepreneurDashboard> {
             child: SingleChildScrollView(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: _isSidebarCollapsed ? CrossAxisAlignment.center : CrossAxisAlignment.start,
                 children: [
                   _buildNavItem(0, Icons.space_dashboard_outlined, 'Tableau de bord'),
                   
@@ -121,14 +127,11 @@ class _EntrepreneurDashboardState extends State<EntrepreneurDashboard> {
                     _buildNavItem(3, Icons.chat_bubble_outline, 'Conversations', badge: '2'),
                   ]),
                   
-                  _buildNavSection('Gestion', false, Icons.inventory_2_outlined, [
-                    _buildNavItem(4, Icons.receipt_long_outlined, 'Factures'),
-                    _buildNavItem(5, Icons.money_off_outlined, 'Dépenses'),
-                    _buildNavItem(6, Icons.savings_outlined, 'Trésorerie'),
-                    _buildNavItem(7, Icons.account_balance_outlined, 'Comptabilité'),
-                    _buildNavItem(8, Icons.people_outline, 'Ressources Humaines'),
-                    _buildNavItem(9, Icons.inventory_2_outlined, 'Inventaire & Stock'),
-                    _buildNavItem(10, Icons.trending_up, 'CRM & Pipeline'),
+                  _buildNavSection('Finance', false, Icons.account_balance_outlined, [
+                    _buildNavItem(4, Icons.space_dashboard_outlined, 'Tableau de bord financier'),
+                    _buildNavItem(5, Icons.receipt_long_outlined, 'Factures'),
+                    _buildNavItem(6, Icons.money_off_outlined, 'Dépenses'),
+                    _buildNavItem(7, Icons.account_balance_outlined, 'Fiscalité & CNSS'),
                   ]),
 
                   _buildNavSection('Développement', false, Icons.rocket_launch_outlined, [
@@ -136,6 +139,8 @@ class _EntrepreneurDashboardState extends State<EntrepreneurDashboard> {
                     _buildNavItem(12, Icons.track_changes_outlined, 'Suivi de Projets'),
                     _buildNavItem(13, Icons.storefront_outlined, 'Marketplace'),
                     _buildNavItem(14, Icons.school_outlined, 'Microlearning'),
+                    if (widget.userData?['role'] == 'formateur')
+                      _buildNavItem(20, Icons.analytics_outlined, 'Dashboard Formateur'),
                     _buildNavItem(17, Icons.calculate_outlined, 'Simulateur'),
                     _buildNavItem(18, Icons.forum_outlined, 'Forum Communautaire'),
                     _buildNavItem(19, Icons.gavel_outlined, 'Base Légale'),
@@ -143,6 +148,7 @@ class _EntrepreneurDashboardState extends State<EntrepreneurDashboard> {
 
                   _buildNavSection('PARAMÈTRES', false, Icons.settings_suggest_outlined, [
                     _buildNavItem(15, Icons.person_outline, 'Mon profil'),
+                    _buildNavItem(21, Icons.headset_mic_outlined, 'Support'),
                     _buildLogoutItem(),
                   ]),
                 ],
@@ -150,65 +156,37 @@ class _EntrepreneurDashboardState extends State<EntrepreneurDashboard> {
             ),
           ),
           
-          // Premium
-          Container(
-            margin: const EdgeInsets.all(16),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF1F8F1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Passez au niveau supérieur', style: GoogleFonts.inter(color: NexaColors.darkNavy, fontSize: 13, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 6),
-                Text('Découvrez nos offres premium pour développer votre entreprise.', style: GoogleFonts.inter(color: const Color(0xFF64748B), fontSize: 11, height: 1.4)),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => PremiumUpgradePage(userData: widget.userData)));
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: NexaColors.primaryGreen,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+          if (!_isSidebarCollapsed)
+            InkWell(
+              onTap: () => setState(() => _selectedNav = 21),
+              child: const Padding(
+                padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
+                child: Row(
+                  children: [
+                    Icon(Icons.headset_mic_outlined, color: Color(0xFF64748B), size: 20),
+                    SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Besoin d\'aide ?', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                        Text('Contactez le support', style: TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+                      ],
                     ),
-                    child: const Text('Découvrir'),
-                  ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-
-          InkWell(
-            onTap: () => showChatBot(context),
-            child: const Padding(
-              padding: EdgeInsets.fromLTRB(20, 0, 20, 24),
-              child: Row(
-                children: [
-                  Icon(Icons.headset_mic_outlined, color: Color(0xFF64748B), size: 20),
-                  SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Besoin d\'aide ?', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                      Text('Contactez le support', style: TextStyle(color: Color(0xFF64748B), fontSize: 11)),
-                    ],
-                  ),
-                ],
               ),
             ),
-          ),
+          if (_isSidebarCollapsed)
+            IconButton(onPressed: () => setState(() => _selectedNav = 21), icon: const Icon(Icons.headset_mic_outlined, color: Color(0xFF64748B))),
         ],
       ),
     );
   }
 
   Widget _buildNavSection(String title, bool isCollapsed, IconData icon, List<Widget> children) {
+    if (_isSidebarCollapsed) {
+      return Column(children: children);
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -260,15 +238,17 @@ class _EntrepreneurDashboardState extends State<EntrepreneurDashboard> {
         child: Row(
           children: [
             const Icon(Icons.logout, size: 20, color: Colors.redAccent),
-            const SizedBox(width: 12),
-            Text(
-              'Déconnexion',
-              style: GoogleFonts.inter(
-                color: Colors.redAccent,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
+            if (!_isSidebarCollapsed) ...[
+              const SizedBox(width: 12),
+              Text(
+                'Déconnexion',
+                style: GoogleFonts.inter(
+                  color: Colors.redAccent,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
@@ -279,33 +259,35 @@ class _EntrepreneurDashboardState extends State<EntrepreneurDashboard> {
     final isSelected = _selectedNav == index;
     return InkWell(
       onTap: () => setState(() => _selectedNav = index),
-      borderRadius: BorderRadius.circular(8),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 2),
+        margin: const EdgeInsets.symmetric(vertical: 2),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
           color: isSelected ? const Color(0xFFE8F5E9) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
+          mainAxisAlignment: _isSidebarCollapsed ? MainAxisAlignment.center : MainAxisAlignment.start,
           children: [
-            Icon(icon, size: 18, color: isSelected ? NexaColors.primaryGreen : const Color(0xFF64748B)),
-            const SizedBox(width: 12),
-            Text(
-              label,
-              style: GoogleFonts.inter(
-                color: isSelected ? NexaColors.primaryGreen : const Color(0xFF475569),
-                fontSize: 13,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            Icon(icon, size: 20, color: isSelected ? NexaColors.primaryGreen : const Color(0xFF64748B)),
+            if (!_isSidebarCollapsed) ...[
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  label,
+                  style: GoogleFonts.inter(
+                    color: isSelected ? NexaColors.primaryGreen : const Color(0xFF475569),
+                    fontSize: 13,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  ),
+                ),
               ),
-            ),
-            if (badge != null) ...[
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.all(5),
-                decoration: const BoxDecoration(color: NexaColors.primaryGreen, shape: BoxShape.circle),
-                child: Text(badge, style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold)),
-              ),
+              if (badge != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: const BoxDecoration(color: NexaColors.primaryGreen, shape: BoxShape.circle),
+                  child: Text(badge, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                ),
             ]
           ],
         ),
@@ -313,7 +295,6 @@ class _EntrepreneurDashboardState extends State<EntrepreneurDashboard> {
     );
   }
 
-  // ────────────── TOPBAR ──────────────
   Widget _buildTopBar() {
     return Container(
       height: 70,
@@ -324,10 +305,20 @@ class _EntrepreneurDashboardState extends State<EntrepreneurDashboard> {
       ),
       child: Row(
         children: [
-          const Icon(Icons.menu, color: Color(0xFF64748B)),
-          const SizedBox(width: 24),
+          Material(
+            color: Colors.transparent,
+            child: IconButton(
+              icon: Icon(_isSidebarCollapsed ? Icons.menu_open : Icons.menu, color: const Color(0xFF64748B)),
+              onPressed: () {
+                debugPrint('Toggling sidebar: $_isSidebarCollapsed');
+                setState(() => _isSidebarCollapsed = !_isSidebarCollapsed);
+              },
+              splashRadius: 24,
+            ),
+          ),
+          const SizedBox(width: 16),
           Container(
-            width: 300,
+            width: 350,
             height: 40,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
@@ -338,22 +329,33 @@ class _EntrepreneurDashboardState extends State<EntrepreneurDashboard> {
               children: [
                 const Icon(Icons.search, color: Color(0xFF94A3B8), size: 18),
                 const SizedBox(width: 8),
-                Expanded(child: Text('Rechercher...', style: GoogleFonts.inter(color: const Color(0xFF94A3B8), fontSize: 13))),
+                Expanded(
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: _isSidebarCollapsed ? 'Rechercher...' : 'Rechercher un service, un expert...',
+                      hintStyle: GoogleFonts.inter(color: const Color(0xFF94A3B8), fontSize: 13),
+                      border: InputBorder.none,
+                      isDense: true,
+                    ),
+                  ),
+                ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(4)),
-                  child: const Text('⌘K', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.bold)),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    '⌘K',
+                    style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
             ),
           ),
           const Spacer(),
           InkWell(
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('🔔 Vous avez 3 nouvelles notifications.'), backgroundColor: NexaColors.darkNavy),
-              );
-            },
+            onTap: () => _showNotifications(context),
             child: Stack(
               children: [
                 const Icon(Icons.notifications_none, color: Color(0xFF64748B), size: 24),
@@ -414,27 +416,58 @@ class _EntrepreneurDashboardState extends State<EntrepreneurDashboard> {
     );
   }
 
+  void _showNotifications(BuildContext context) {
+    final RenderBox button = context.findRenderObject() as RenderBox;
+    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final RelativeRect position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        button.localToGlobal(Offset.zero, ancestor: overlay),
+        button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.transparent,
+      builder: (context) => Stack(
+        children: [
+          Positioned(
+            top: position.top + 60,
+            right: 24,
+            child: Material(
+              color: Colors.transparent,
+              child: NotificationsPanel(userId: widget.userData?['id'] ?? ''),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSelectedContent() {
     switch (_selectedNav) {
       case 0: return _buildMainContent();
       case 1: return ProjetsPage(userData: widget.userData);
       case 2: return InvestisseursSearchPage(onContact: () => setState(() => _selectedNav = 3));
       case 3: return MessagesPage(userData: widget.userData);
-      case 4: return FacturesPage(userData: widget.userData);
-      case 5: return DepensesPage(userData: widget.userData);
-      case 6: return TresoreriePage(userData: widget.userData);
+      case 4: return FinanceDashboard(userData: widget.userData);
+      case 5: return FacturesPage(userData: widget.userData);
+      case 6: return DepensesPage(userData: widget.userData);
       case 7: return ComptabilitePage(userData: widget.userData);
       case 8: return RHPage(userData: widget.userData);
       case 9: return StockPage(userData: widget.userData);
       case 10: return CRMPage(userData: widget.userData);
       case 11: return BusinessPlanIAPage(userData: widget.userData);
       case 12: return SuiviProjetsPage(userData: widget.userData);
-      case 13: return MarketplaceB2BPage(userData: widget.userData);
-      case 14: return MicroLearningPage(userData: widget.userData);
+      case 13: return MarketplaceExplorer(userData: widget.userData);
+      case 14: return MicrolearningPage(userData: widget.userData);
       case 15: return ProfilePage(userData: widget.userData);
       case 17: return SimulateurPage(userData: widget.userData);
       case 18: return ForumPage(userData: widget.userData);
       case 19: return BaseLegalePage(userData: widget.userData);
+      case 20: return TrainerDashboardPage(userData: widget.userData);
+      case 21: return SupportPage(userData: widget.userData);
       default: return const Center(child: Text('Page non trouvée', style: TextStyle(color: Colors.grey)));
     }
   }

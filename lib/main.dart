@@ -7,6 +7,7 @@ import 'pages/entrepreneur_dashboard.dart';
 import 'pages/investisseur_dashboard.dart';
 import 'pages/prestataire_dashboard.dart';
 import 'pages/formateur_dashboard.dart';
+import 'pages/admin/admin_dashboard.dart';
 import 'services/auth_service.dart';
 
 void main() {
@@ -52,6 +53,10 @@ class NexaMaApp extends StatelessWidget {
           final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
           return FormateurDashboard(userData: args);
         },
+        '/dashboard/admin': (context) {
+          final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+          return AdminDashboard(userData: args);
+        },
       },
     );
   }
@@ -86,6 +91,8 @@ class _SplashPageState extends State<SplashPage> {
         Navigator.of(context).pushReplacementNamed('/dashboard/prestataire', arguments: user);
       } else if (role == 'formateur') {
         Navigator.of(context).pushReplacementNamed('/dashboard/formateur', arguments: user);
+      } else if (role == 'administrateur') {
+        Navigator.of(context).pushReplacementNamed('/dashboard/admin', arguments: user);
       } else {
         Navigator.of(context).pushReplacementNamed('/');
       }

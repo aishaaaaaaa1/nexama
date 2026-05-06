@@ -5,6 +5,7 @@ import 'dart:convert';
 import '../../theme/app_theme.dart';
 import '../../config/api_config.dart';
 import '../../services/api_service.dart';
+import 'deposer_projet_page.dart';
 
 class ProjetsPage extends StatefulWidget {
   final Map<String, dynamic>? userData;
@@ -201,7 +202,7 @@ class _ProjetsPageState extends State<ProjetsPage> {
               ],
             ),
             ElevatedButton.icon(
-              onPressed: _showAddProjectDialog,
+              onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => DeposerProjetPage(userData: widget.userData))).then((_) => _fetchProjets()),
               icon: const Icon(Icons.add),
               label: const Text('Déposer un Projet'),
               style: ElevatedButton.styleFrom(backgroundColor: NexaColors.primaryGreen, foregroundColor: Colors.white),

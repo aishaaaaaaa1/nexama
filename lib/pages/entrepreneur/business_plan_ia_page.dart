@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import 'dart:convert';
+import 'dart:html' as html;
 import '../../theme/app_theme.dart';
 import '../../config/api_config.dart';
 import '../../services/api_service.dart';
@@ -17,78 +17,70 @@ class BusinessPlanIAPage extends StatefulWidget {
 class _BusinessPlanIAPageState extends State<BusinessPlanIAPage> {
   int _currentStep = 0;
   bool _isGenerating = false;
-  String? _generatedPlan;
-  
-  bool _isEditing = false;
-  final TextEditingController _planEditorController = TextEditingController();
-  final List<Map<String, dynamic>> _versions = [];
+  Map<String, dynamic>? _currentPlan;
+  Map<String, dynamic>? _currentVersion;
 
   final List<Map<String, dynamic>> _steps = [
-    {'title': 'Secteur', 'label': 'Quel est votre secteur d\'activité ?', 'hint': 'Ex: Fintech, Agriculture, E-commerce...', 'controller': TextEditingController()},
-    {'title': 'Projet', 'label': 'Décrivez votre projet en quelques phrases.', 'hint': 'Ex: Une application de livraison de produits locaux...', 'controller': TextEditingController()},
-    {'title': 'Cible', 'label': 'Quelle est votre clientèle cible ?', 'hint': 'Ex: Jeunes actifs 25-40 ans, PME au Maroc...', 'controller': TextEditingController()},
-    {'title': 'Concurrents', 'label': 'Qui sont vos principaux concurrents ?', 'hint': 'Ex: Entreprises locales, solutions internationales...', 'controller': TextEditingController()},
-    {'title': 'Revenus', 'label': 'Quel est votre modèle de revenus ?', 'hint': 'Ex: Abonnement mensuel, commissions sur ventes...', 'controller': TextEditingController()},
-    {'title': 'Budget', 'label': 'Montant de l\'investissement initial estimé ?', 'hint': 'Ex: 50 000 MAD, 200 000 MAD...', 'controller': TextEditingController()},
-    {'title': 'Localisation', 'label': 'Dans quelle ville/région ?', 'hint': 'Ex: Casablanca, Rabat, Agadir...', 'controller': TextEditingController()},
-    {'title': 'Acquisition', 'label': 'Stratégie pour vos premiers clients ?', 'hint': 'Ex: Pub Instagram, bouche-à-oreille, prospection...', 'controller': TextEditingController()},
-    {'title': 'Avantage', 'label': 'Quel est votre avantage concurrentiel ?', 'hint': 'Ex: Prix bas, technologie exclusive, expertise...', 'controller': TextEditingController()},
-    {'title': 'Objectifs', 'label': 'Quels sont vos objectifs à 12 mois ?', 'hint': 'Ex: 1000 clients, 1M MAD de CA...', 'controller': TextEditingController()},
+    {'title': 'Nom', 'label': 'Nom de votre projet', 'hint': 'Ex: EcoTrans Morocco, FoodieDelivery...', 'controller': TextEditingController()},
+    {'title': 'Secteur', 'label': 'Secteur d\'activité', 'hint': 'Ex: Fintech, Agriculture, E-commerce...', 'controller': TextEditingController()},
+    {'title': 'Produit', 'label': 'Description du produit/service', 'hint': 'Détaillez ce que vous proposez...', 'controller': TextEditingController()},
+    {'title': 'Problème', 'label': 'Quel problème résolvez-vous ?', 'hint': 'Pourquoi vos clients ont-ils besoin de vous ?', 'controller': TextEditingController()},
+    {'title': 'Cible', 'label': 'Client cible (Persona)', 'hint': 'Ex: Étudiants, Entreprises de transport...', 'controller': TextEditingController()},
+    {'title': 'Modèle', 'label': 'Prix / Modèle de revenu', 'hint': 'Comment allez-vous gagner de l\'argent ?', 'controller': TextEditingController()},
+    {'title': 'Concurrents', 'label': 'Concurrents principaux', 'hint': 'Qui sont vos rivaux directs/indirects ?', 'controller': TextEditingController()},
+    {'title': 'Avantage', 'label': 'Avantage concurrentiel', 'hint': 'Pourquoi vous et pas eux ?', 'controller': TextEditingController()},
+    {'title': 'Budget', 'label': 'Budget initial estimé', 'hint': 'Montant pour démarrer le projet...', 'controller': TextEditingController()},
+    {'title': 'Objectif', 'label': 'Objectif sur 1-3 ans', 'hint': 'Ex: Devenir leader régional, 10M MAD CA...', 'controller': TextEditingController()},
   ];
 
-  void _generate() async {
-    setState(() => _isGenerating = true);
+  Future<void> _exportPdf() async {
+    if (_currentPlan == null) return;
     try {
-      final userId = widget.userData?['id'] ?? 'user_123';
-      final Map<String, String> answers = {};
-      
-      // Collect answers
-      answers['secteur'] = _steps[0]['controller'].text;
-      answers['description'] = _steps[1]['controller'].text;
-      answers['cible'] = _steps[2]['controller'].text;
-      answers['concurrents'] = _steps[3]['controller'].text;
-      answers['prix'] = _steps[4]['controller'].text;
-      answers['budget'] = _steps[5]['controller'].text;
-      answers['localisation'] = _steps[6]['controller'].text;
-      answers['acquisition'] = _steps[7]['controller'].text;
-      answers['avantage'] = _steps[8]['controller'].text;
-      answers['objectifs'] = _steps[9]['controller'].text;
-
-      final response = await ApiService.post(
-        ApiConfig.uri('/api/entrepreneur/ia/business-plan'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'utilisateur_id': userId,
-          'answers': answers
-        }),
-      );
-
-      if (response.statusCode == 201) {
-        final data = json.decode(response.body);
-        if (mounted) {
-          setState(() {
-            _generatedPlan = data['contenu_markdown'];
-            _planEditorController.text = _generatedPlan!;
-            _versions.insert(0, {'date': DateTime.now(), 'content': _generatedPlan});
-          });
-        }
-      } else {
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: ${response.body}')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Génération du PDF...')));
+      final response = await ApiService.get(ApiConfig.uri('/api/business-plan/${_currentPlan!['id']}/export'));
+      if (response.statusCode == 200) {
+        final blob = html.Blob([response.bodyBytes], 'application/pdf');
+        final url = html.Url.createObjectUrlFromBlob(blob);
+        final anchor = html.AnchorElement(href: url)
+          ..setAttribute('download', 'BusinessPlan_${_currentPlan!['nom_projet']}.pdf')
+          ..click();
+        html.Url.revokeObjectUrl(url);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ PDF téléchargé !'), backgroundColor: Colors.green));
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erreur: $e')));
-    } finally {
-      if (mounted) setState(() => _isGenerating = false);
+      debugPrint('Export error: $e');
     }
   }
 
-  void _exportPdf() {
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Génération du PDF en cours...')));
-    Future.delayed(const Duration(seconds: 2), () {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('✅ Business Plan téléchargé avec succès.'), backgroundColor: Colors.green));
+  Future<void> _generatePlan() async {
+    setState(() => _isGenerating = true);
+    try {
+      final Map<String, String> reponses = {};
+      for (int i = 0; i < _steps.length; i++) {
+        reponses['q${i+1}'] = _steps[i]['controller'].text;
       }
-    });
+
+      final response = await ApiService.post(
+        ApiConfig.uri('/api/business-plan/generate'),
+        body: {
+          'nom_projet': _steps[0]['controller'].text,
+          'secteur': _steps[1]['controller'].text,
+          'reponses_form': reponses,
+        },
+      );
+
+      if (response.statusCode == 201 && mounted) {
+        final data = json.decode(response.body);
+        setState(() {
+          _currentPlan = data['plan'];
+          _currentVersion = data['version'];
+          _isGenerating = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Generation error: $e');
+      if (mounted) setState(() => _isGenerating = false);
+    }
   }
 
   @override
@@ -96,112 +88,95 @@ class _BusinessPlanIAPageState extends State<BusinessPlanIAPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Générateur de Business Plan IA', style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold, color: NexaColors.darkNavy)),
-                const Text('Propulsé par Google Gemini 1.5 Flash (Fallback: Groq LLaMA3)', style: TextStyle(color: NexaColors.primaryGreen, fontWeight: FontWeight.bold, fontSize: 13)),
-              ],
-            ),
-            if (_generatedPlan != null)
-              ElevatedButton.icon(
-                onPressed: _exportPdf,
-                icon: const Icon(Icons.picture_as_pdf),
-                label: const Text('Exporter PDF'),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
-              )
-          ],
-        ),
-        const SizedBox(height: 24),
-        
-        if (_generatedPlan == null && !_isGenerating)
-          _buildWizard()
-        else if (_isGenerating)
+        _buildHeader(),
+        const SizedBox(height: 32),
+        if (_isGenerating)
           _buildLoadingState()
+        else if (_currentVersion != null)
+          _buildResultView()
         else
-          _buildResultView(),
+          _buildStepper(),
       ],
     );
   }
 
-  Widget _buildWizard() {
+  Widget _buildHeader() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Générateur Business Plan IA', style: GoogleFonts.inter(fontSize: 28, fontWeight: FontWeight.w800, color: NexaColors.darkNavy)),
+            const SizedBox(height: 4),
+            Text('Obtenez un plan professionnel complet en 60 secondes.', style: TextStyle(color: Colors.grey[600])),
+          ],
+        ),
+        if (_currentVersion != null)
+          ElevatedButton.icon(
+            onPressed: () => setState(() {
+              _currentVersion = null;
+              _currentStep = 0;
+            }),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Nouveau Plan'),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.white, foregroundColor: NexaColors.darkNavy),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildStepper() {
     return Container(
       padding: const EdgeInsets.all(32),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10)],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Progress Header
           Row(
             children: [
-              Text('Étape ${_currentStep + 1} sur 10', style: GoogleFonts.inter(fontWeight: FontWeight.bold, color: NexaColors.primaryGreen)),
+              Text('Étape ${_currentStep + 1} sur ${_steps.length}', style: const TextStyle(fontWeight: FontWeight.bold, color: NexaColors.primaryGreen)),
               const Spacer(),
-              SizedBox(
-                width: 200,
-                child: LinearProgressIndicator(
-                  value: (_currentStep + 1) / 10,
-                  backgroundColor: const Color(0xFFF1F5F9),
-                  valueColor: const AlwaysStoppedAnimation(NexaColors.primaryGreen),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
+              SizedBox(width: 200, child: LinearProgressIndicator(value: (_currentStep + 1) / _steps.length, backgroundColor: Colors.grey[100], valueColor: const AlwaysStoppedAnimation(NexaColors.primaryGreen))),
             ],
           ),
           const SizedBox(height: 40),
-          
-          // Question
-          Text(_steps[_currentStep]['label'], style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600, color: NexaColors.darkNavy)),
+          Text(_steps[_currentStep]['label'], style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.w700)),
           const SizedBox(height: 16),
           TextField(
             controller: _steps[_currentStep]['controller'],
             maxLines: 4,
             decoration: InputDecoration(
               hintText: _steps[_currentStep]['hint'],
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE2E8F0))),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: NexaColors.primaryGreen, width: 2)),
-              fillColor: const Color(0xFFF8FAFC),
               filled: true,
+              fillColor: const Color(0xFFF8FAFC),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: NexaColors.primaryGreen, width: 2)),
             ),
           ),
           const SizedBox(height: 40),
-          
-          // Navigation
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               if (_currentStep > 0)
-                TextButton.icon(
-                  onPressed: () => setState(() => _currentStep--),
-                  icon: const Icon(Icons.arrow_back),
-                  label: const Text('Précédent'),
-                  style: TextButton.styleFrom(foregroundColor: const Color(0xFF64748B)),
-                )
+                TextButton(onPressed: () => setState(() => _currentStep--), child: const Text('Précédent'))
               else
                 const SizedBox(),
-              
               ElevatedButton(
                 onPressed: () {
-                  if (_currentStep < 9) {
+                  if (_currentStep < _steps.length - 1) {
                     setState(() => _currentStep++);
                   } else {
-                    _generate();
+                    _generatePlan();
                   }
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: NexaColors.primaryGreen,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                child: Text(_currentStep < 9 ? 'Continuer' : 'Générer mon Business Plan 🚀'),
+                style: ElevatedButton.styleFrom(backgroundColor: NexaColors.primaryGreen, foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                child: Text(_currentStep < _steps.length - 1 ? 'Continuer' : 'Générer mon Business Plan 🚀'),
               ),
             ],
           ),
@@ -211,122 +186,71 @@ class _BusinessPlanIAPageState extends State<BusinessPlanIAPage> {
   }
 
   Widget _buildLoadingState() {
-    return Container(
-      width: double.infinity,
-      height: 400,
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE2E8F0))),
+    return Center(
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(valueColor: AlwaysStoppedAnimation(NexaColors.primaryGreen)),
+          const SizedBox(height: 100),
+          const CircularProgressIndicator(color: NexaColors.primaryGreen),
           const SizedBox(height: 24),
-          Text('Analyse de vos réponses...', style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold, color: NexaColors.darkNavy)),
+          Text('NexaAI rédige votre plan...', style: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Text('L\'IA de NexaMa (Gemini/LLaMA3) rédige votre Business Plan complet.', style: GoogleFonts.inter(color: const Color(0xFF64748B))),
-          const SizedBox(height: 16),
-          _buildLoadingHint('Génération du résumé exécutif...'),
+          const Text('Cela prend environ 30-45 secondes.', style: TextStyle(color: Colors.grey)),
         ],
       ),
     );
   }
 
-  Widget _buildLoadingHint(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(color: NexaColors.primaryGreen.withOpacity(0.1), borderRadius: BorderRadius.circular(20)),
-      child: Text(text, style: const TextStyle(color: NexaColors.primaryGreen, fontSize: 12, fontWeight: FontWeight.bold)),
+  Widget _buildResultView() {
+    final sections = _currentVersion!['contenu_json'] as Map<String, dynamic>;
+    return Expanded(
+      child: SingleChildScrollView(
+        child: Column(
+          children: [
+            _buildResultActions(),
+            const SizedBox(height: 24),
+            ...sections.entries.map((e) => _buildSectionCard(e.key, e.value)).toList(),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildResultView() {
-    int currentIndex = _versions.indexWhere((v) => v['content'] == _generatedPlan);
-    
-    return Expanded(
+  Widget _buildResultActions() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        OutlinedButton.icon(onPressed: () {}, icon: const Icon(Icons.edit), label: const Text('Modifier')),
+        const SizedBox(width: 12),
+        ElevatedButton.icon(
+          onPressed: _exportPdf,
+          icon: const Icon(Icons.picture_as_pdf),
+          label: const Text('Exporter PDF'),
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, foregroundColor: Colors.white),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionCard(String key, String content) {
+    String title = key.toUpperCase();
+    if (key == 'resume') title = 'Résumé Exécutif';
+    if (key == 'marche') title = 'Étude de Marché';
+    if (key == 'swot') title = 'Analyse SWOT';
+    if (key == 'modele') title = 'Modèle Économique';
+    if (key == 'marketing') title = 'Stratégie Marketing';
+    if (key == 'financier') title = 'Prévisions Financières';
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 24),
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFFE2E8F0))),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Résultat du Business Plan', style: GoogleFonts.inter(fontWeight: FontWeight.bold, fontSize: 18)),
-              Row(
-                children: [
-                  if (_versions.isNotEmpty && !_isEditing)
-                    DropdownButton<int>(
-                      value: currentIndex >= 0 ? currentIndex : 0,
-                      icon: const Icon(Icons.history, color: Colors.blue),
-                      underline: const SizedBox(),
-                      items: _versions.asMap().entries.map((e) {
-                        return DropdownMenuItem(
-                          value: e.key,
-                          child: Text('Version ${_versions.length - e.key} (${e.value['date'].hour}:${e.value['date'].minute.toString().padLeft(2, '0')})', style: const TextStyle(fontSize: 13)),
-                        );
-                      }).toList(),
-                      onChanged: (idx) {
-                        if (idx != null) {
-                          setState(() {
-                            _generatedPlan = _versions[idx]['content'];
-                            _planEditorController.text = _generatedPlan!;
-                            _isEditing = false;
-                          });
-                        }
-                      },
-                    ),
-                  const SizedBox(width: 16),
-                  ElevatedButton.icon(
-                    onPressed: () {
-                      if (_isEditing) {
-                        setState(() {
-                          _generatedPlan = _planEditorController.text;
-                          _isEditing = false;
-                          // Ajouter une nouvelle version à l'historique
-                          _versions.insert(0, {'date': DateTime.now(), 'content': _generatedPlan});
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Modifications sauvegardées dans l\'historique.')));
-                        });
-                      } else {
-                        setState(() => _isEditing = true);
-                      }
-                    },
-                    icon: Icon(_isEditing ? Icons.save : Icons.edit),
-                    label: Text(_isEditing ? 'Sauvegarder' : 'Modifier (Markdown)'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _isEditing ? NexaColors.primaryGreen : Colors.white,
-                      foregroundColor: _isEditing ? Colors.white : NexaColors.darkNavy,
-                      side: BorderSide(color: _isEditing ? NexaColors.primaryGreen : const Color(0xFFE2E8F0)),
-                    ),
-                  ),
-                ],
-              )
-            ],
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
-              ),
-              child: _isEditing 
-                  ? TextField(
-                      controller: _planEditorController,
-                      maxLines: null,
-                      expands: true,
-                      decoration: const InputDecoration(border: InputBorder.none, hintText: 'Modifiez votre business plan ici...'),
-                      style: GoogleFonts.robotoMono(fontSize: 14, height: 1.5),
-                    )
-                  : Markdown(
-                      data: _generatedPlan!,
-                      styleSheet: MarkdownStyleSheet(
-                        h1: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold, color: NexaColors.darkNavy),
-                        h2: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: NexaColors.primaryGreen, height: 2),
-                        p: GoogleFonts.inter(fontSize: 14, height: 1.6, color: const Color(0xFF334155)),
-                        listBullet: GoogleFonts.inter(color: NexaColors.primaryGreen),
-                      ),
-                    ),
-            ),
-          ),
+          Text(title, style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: NexaColors.primaryGreen)),
+          const Divider(height: 32),
+          Text(content, style: const TextStyle(fontSize: 15, height: 1.6, color: Color(0xFF334155))),
         ],
       ),
     );

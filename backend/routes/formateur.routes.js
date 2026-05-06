@@ -1,6 +1,7 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { verifyToken } = require('../utils/authMiddleware');
+const { logAction } = require('../utils/auditLogger');
 const router = express.Router();
 const prisma = new PrismaClient();
 
@@ -122,6 +123,23 @@ router.get('/messages/:id', async (req, res) => {
     { id: 1, expediteur: "Admin NexaMa", texte: "Nouveau message de support.", date: "10 Mai 2024", lu: true },
     { id: 2, expediteur: "Yassine M.", texte: "Est-ce que le cours Flutter sera mis à jour ?", date: "15 Mai 2024", lu: false },
   ]);
+});
+
+// ==========================================
+// 6. Premium
+// ==========================================
+router.post('/premium', async (req, res) => {
+  try {
+    const { plan } = req.body;
+    const user = await prisma.utilisateurs.update({
+      where: { id: req.user.id },
+      data: { is_verified: true }
+    });
+    await logAction(req.user.id, 'PREMIUM_UPGRADE', `Passage au plan ${plan} (Formateur)`);
+    res.json({ message: `Passage au plan ${plan} réussi !`, user });
+  } catch (error) {
+    res.status(500).json({ error: "Erreur lors du passage au premium" });
+  }
 });
 
 module.exports = router;

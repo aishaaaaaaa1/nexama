@@ -32,7 +32,8 @@ class ApiService {
   // Wrapper pour http.post
   static Future<http.Response> post(Uri url, {Map<String, String>? headers, Object? body, Encoding? encoding}) async {
     final authHeaders = await _getHeaders(headers);
-    final response = await http.post(url, headers: authHeaders, body: body, encoding: encoding);
+    final jsonBody = (body is Map || body is List) ? json.encode(body) : body;
+    final response = await http.post(url, headers: authHeaders, body: jsonBody, encoding: encoding);
     _handleAuthErrors(response);
     return response;
   }
@@ -40,7 +41,8 @@ class ApiService {
   // Wrapper pour http.put
   static Future<http.Response> put(Uri url, {Map<String, String>? headers, Object? body, Encoding? encoding}) async {
     final authHeaders = await _getHeaders(headers);
-    final response = await http.put(url, headers: authHeaders, body: body, encoding: encoding);
+    final jsonBody = (body is Map || body is List) ? json.encode(body) : body;
+    final response = await http.put(url, headers: authHeaders, body: jsonBody, encoding: encoding);
     _handleAuthErrors(response);
     return response;
   }
@@ -48,7 +50,8 @@ class ApiService {
   // Wrapper pour http.delete
   static Future<http.Response> delete(Uri url, {Map<String, String>? headers, Object? body, Encoding? encoding}) async {
     final authHeaders = await _getHeaders(headers);
-    final response = await http.delete(url, headers: authHeaders, body: body, encoding: encoding);
+    final jsonBody = (body is Map || body is List) ? json.encode(body) : body;
+    final response = await http.delete(url, headers: authHeaders, body: jsonBody, encoding: encoding);
     _handleAuthErrors(response);
     return response;
   }
