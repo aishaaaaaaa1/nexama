@@ -3,7 +3,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 
 class NavBar extends StatefulWidget {
-  const NavBar({super.key});
+  final int activeIndex;
+  const NavBar({super.key, this.activeIndex = 0});
 
   @override
   State<NavBar> createState() => _NavBarState();
@@ -84,7 +85,7 @@ class _NavBarState extends State<NavBar> {
   }
 
   Widget _navItem(String label, int i) {
-    final active = i == 0;
+    final active = i == widget.activeIndex;
     final hovered = _hoveredIndex == i;
     final hasArrow = label == 'Ressources';
 
@@ -92,11 +93,25 @@ class _NavBarState extends State<NavBar> {
       onEnter: (_) => setState(() => _hoveredIndex = i),
       onExit: (_) => setState(() => _hoveredIndex = -1),
       cursor: SystemMouseCursors.click,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
+      child: GestureDetector(
+        onTap: () {
+          if (label == 'À propos') {
+            Navigator.of(context).pushNamed('/about');
+          } else if (label == 'Fonctionnalités') {
+            Navigator.of(context).pushNamed('/features');
+          } else if (label == 'Pour qui ?') {
+            Navigator.of(context).pushNamed('/target');
+          } else if (label == 'Ressources') {
+            Navigator.of(context).pushNamed('/resources');
+          } else if (label == 'Accueil') {
+            Navigator.of(context).pushNamed('/');
+          }
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -119,9 +134,9 @@ class _NavBarState extends State<NavBar> {
               duration: const Duration(milliseconds: 200),
               height: 2.5,
               width: active || hovered ? 28 : 0,
-              decoration: BoxDecoration(color: NexaColors.primaryGreen, borderRadius: BorderRadius.circular(2)),
             ),
           ],
+        ),
         ),
       ),
     );

@@ -30,8 +30,6 @@ class FooterSection extends StatelessWidget {
                         _buildBrandColumn(),
                         const SizedBox(height: 40),
                         _buildLinksRow(),
-                        const SizedBox(height: 40),
-                        _buildNewsletterColumn(),
                       ],
                     )
                   : Row(
@@ -45,14 +43,8 @@ class FooterSection extends StatelessWidget {
                         const SizedBox(width: 40),
                         // Links columns
                         Expanded(
-                          flex: 5,
+                          flex: 6,
                           child: _buildLinksRow(),
-                        ),
-                        const SizedBox(width: 40),
-                        // Newsletter column
-                        Expanded(
-                          flex: 3,
-                          child: _buildNewsletterColumn(),
                         ),
                       ],
                     ),
@@ -277,58 +269,7 @@ class FooterSection extends StatelessWidget {
     );
   }
 
-  Widget _buildNewsletterColumn() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Newsletter',
-          style: GoogleFonts.inter(
-            color: Colors.white,
-            fontSize: 14.5,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Recevez nos conseils et nouveautés\nchaque semaine.',
-          style: GoogleFonts.inter(
-            color: Colors.white.withValues(alpha: 0.6),
-            fontSize: 13,
-            fontWeight: FontWeight.w400,
-            height: 1.5,
-          ),
-        ),
-        const SizedBox(height: 18),
-        // Email input
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-          ),
-          child: TextField(
-            style: GoogleFonts.inter(
-              color: Colors.white,
-              fontSize: 13.5,
-            ),
-            decoration: InputDecoration(
-              hintText: 'Votre e-mail',
-              hintStyle: GoogleFonts.inter(
-                color: Colors.white.withValues(alpha: 0.4),
-                fontSize: 13.5,
-              ),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        // Subscribe button
-        _SubscribeButton(),
-      ],
-    );
-  }
+
 
   Widget _buildCopyrightText() {
     return Text(
@@ -431,48 +372,3 @@ class _FooterLinkState extends State<_FooterLink> {
   }
 }
 
-class _SubscribeButton extends StatefulWidget {
-  @override
-  State<_SubscribeButton> createState() => _SubscribeButtonState();
-}
-
-class _SubscribeButtonState extends State<_SubscribeButton> {
-  bool _isHovered = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
-      cursor: SystemMouseCursors.click,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 13),
-        decoration: BoxDecoration(
-          color: _isHovered ? NexaColors.darkGreen : NexaColors.primaryGreen,
-          borderRadius: BorderRadius.circular(10),
-          boxShadow: _isHovered
-              ? [
-                  BoxShadow(
-                    color: NexaColors.primaryGreen.withValues(alpha: 0.4),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : [],
-        ),
-        child: Center(
-          child: Text(
-            'S\'abonner',
-            style: GoogleFonts.inter(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'pages/landing_page.dart';
+import 'pages/about_page.dart';
+import 'pages/features_page.dart';
+import 'pages/target_page.dart';
+import 'pages/resources_page.dart';
 import 'pages/signup_page.dart';
 import 'pages/login_page.dart';
 import 'pages/entrepreneur_dashboard.dart';
@@ -35,6 +39,10 @@ class NexaMaApp extends StatelessWidget {
       routes: {
         '/splash': (context) => const SplashPage(),
         '/': (context) => const LandingPage(),
+        '/about': (context) => const AboutPage(),
+        '/features': (context) => const FeaturesPage(),
+        '/target': (context) => const TargetPage(),
+        '/resources': (context) => const ResourcesPage(),
         '/signup': (context) => const SignupPage(),
         '/login': (context) => const LoginPage(),
         '/dashboard/entrepreneur': (context) {
