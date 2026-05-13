@@ -159,7 +159,7 @@ class _FormateurDashboardState extends State<FormateurDashboard> {
                   _buildNavItem(11, Icons.article_outlined, 'Rapports'),
                   if (!_isSidebarCollapsed) const Padding(padding: EdgeInsets.only(left: 12, top: 16, bottom: 8), child: Text('PARAMÈTRES', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold))),
                   _buildNavItem(12, Icons.person_outline, 'Profil formateur'),
-                  _buildNavItem(13, Icons.settings_outlined, 'Paramètres'),
+                  _buildNavItem(13, Icons.settings_outlined, 'Configuration'),
                   _buildNavItem(14, Icons.payment_outlined, 'Paiements'),
                   const SizedBox(height: 16),
                   _buildLogoutItem(),

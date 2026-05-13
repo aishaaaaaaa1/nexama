@@ -15,7 +15,45 @@ const financeRoutes = require('./routes/finance.routes');
 const marketplaceRoutes = require('./routes/marketplace.routes');
 
 const app = express();
-const port = process.env.PORT || 3000;
+const preferredPort = Number(process.env.PORT) || 3000;
+const portStrict =
+  process.env.PORT_STRICT === '1' || process.env.PORT_STRICT === 'true';
+
+function bindServer(p) {
+  return new Promise((resolve, reject) => {
+    const srv = app.listen(p, () => resolve({ server: srv, port: p }));
+    srv.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        srv.close(() => reject(err));
+      } else {
+        reject(err);
+      }
+    });
+  });
+}
+
+async function listenWithPortFallback(startPort, maxAttempts = 20) {
+  const end = startPort + maxAttempts;
+  for (let p = startPort; p < end; p++) {
+    try {
+      const result = await bindServer(p);
+      if (p !== startPort) {
+        console.warn(
+          `[nexama] Port ${startPort} was busy — using ${p}. Stop the duplicate server or set PORT=${p} in .env if your frontend expects a fixed port.`
+        );
+      }
+      return result;
+    } catch (err) {
+      if (err.code !== 'EADDRINUSE') throw err;
+      if (p < end - 1) {
+        console.warn(`[nexama] Port ${p} in use, trying ${p + 1}...`);
+      }
+    }
+  }
+  throw new Error(
+    `No free port between ${startPort} and ${end - 1}. Set PORT_STRICT=1 and free port ${startPort}, or close other apps.`
+  );
+}
 
 // Log all requests
 app.use((req, res, next) => {
@@ -52,16 +90,39 @@ app.get('/', (req, res) => {
   res.send('NexaMa Backend API is running!');
 });
 
-app.listen(port, async () => {
-  console.log(`Server is running on port ${port}`);
-  
-  // Diagnostic au démarrage
+async function runStartupDbCheck() {
   try {
     const { PrismaClient } = require('@prisma/client');
-    const p = new PrismaClient();
-    const count = await p.projets.count();
+    const prisma = new PrismaClient();
+    const count = await prisma.projets.count();
     console.log(`--- DB CONNECTED: ${count} projects found ---`);
   } catch (err) {
     console.error('--- DB CONNECTION ERROR ---', err.message);
   }
-});
+}
+
+if (portStrict) {
+  const server = app.listen(preferredPort, async () => {
+    console.log(`Server is running on port ${preferredPort}`);
+    await runStartupDbCheck();
+  });
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.error(
+        `Port ${preferredPort} is already in use. Stop the other process or unset PORT_STRICT to try the next free port.`
+      );
+      process.exit(1);
+    }
+    throw err;
+  });
+} else {
+  listenWithPortFallback(preferredPort)
+    .then(async ({ server, port }) => {
+      console.log(`Server is running on port ${port}`);
+      await runStartupDbCheck();
+    })
+    .catch((err) => {
+      console.error(err.message || err);
+      process.exit(1);
+    });
+}

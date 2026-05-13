@@ -7,18 +7,63 @@ const prisma = new PrismaClient();
 
 router.use(verifyToken);
 
+/** JWT / URL peuvent différer par type (ex. rare) — normaliser en string. */
+function ownerMismatch(urlUserId, req) {
+  return String(urlUserId || '') !== String(req.user?.id || '');
+}
+
 // ==========================================
 // 1. Mes Services
 // ==========================================
 router.get('/services/:id', async (req, res) => {
   try {
-    const services = [
-      { id: "1", titre: "Design Logo", categorie: "Design", prix_base: 800 },
-      { id: "2", titre: "Développement Web", categorie: "IT", prix_base: 5000 }
-    ];
+    if (ownerMismatch(req.params.id, req)) {
+      return res.status(403).json({ error: 'Accès refusé' });
+    }
+    const rows = await prisma.services_b2b.findMany({
+      where: { prestataire_id: req.user.id, actif: true },
+      orderBy: { created_at: 'desc' },
+      select: {
+        id: true,
+        titre: true,
+        categorie: true,
+        prix_basique: true,
+      },
+    });
+    const services = rows.map((r) => ({
+      id: r.id,
+      titre: r.titre,
+      categorie: r.categorie,
+      prix_base: r.prix_basique,
+    }));
     res.json(services);
   } catch (error) {
-    res.status(500).json({ error: "Erreur serveur" });
+    console.error(error);
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+/** Désactive le service (soft delete) — reste cohérent avec les commandes liées. */
+router.delete('/services/:id/:serviceId', async (req, res) => {
+  try {
+    if (ownerMismatch(req.params.id, req)) {
+      return res.status(403).json({ error: 'Accès refusé' });
+    }
+    const { serviceId } = req.params;
+    const result = await prisma.services_b2b.updateMany({
+      where: {
+        id: serviceId,
+        prestataire_id: req.user.id,
+      },
+      data: { actif: false },
+    });
+    if (result.count === 0) {
+      return res.status(404).json({ error: 'Service introuvable' });
+    }
+    res.json({ message: 'Service supprimé' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 
@@ -43,10 +88,42 @@ router.get('/commandes/:id', async (req, res) => {
 // ==========================================
 router.post('/services/:id', async (req, res) => {
   try {
-    // En temps normal, on enregistre en base ici.
-    res.status(201).json({ message: "Service créé avec succès", service: req.body });
+    if (ownerMismatch(req.params.id, req)) {
+      return res.status(403).json({ error: 'Accès refusé' });
+    }
+    const { titre, description, categorie, prix_base } = req.body;
+    if (!titre || !categorie || description === undefined || description === null) {
+      return res.status(400).json({ error: 'Champs requis manquants' });
+    }
+    const prix = Number(prix_base);
+    if (Number.isNaN(prix) || prix < 0) {
+      return res.status(400).json({ error: 'Prix invalide' });
+    }
+    const created = await prisma.services_b2b.create({
+      data: {
+        prestataire_id: req.user.id,
+        titre: String(titre).slice(0, 255),
+        description: String(description),
+        categorie: String(categorie).slice(0, 100),
+        prix_basique: prix,
+        tags: [],
+      },
+    });
+    res.status(201).json({
+      message: 'Service créé avec succès',
+      service: {
+        id: created.id,
+        titre: created.titre,
+        categorie: created.categorie,
+        prix_base: created.prix_basique,
+      },
+    });
   } catch (error) {
-    res.status(500).json({ error: "Erreur serveur" });
+    console.error(error);
+    if (error?.code === 'P2003') {
+      return res.status(500).json({ error: 'Utilisateur invalide (reconnectez-vous).' });
+    }
+    res.status(500).json({ error: 'Erreur serveur' });
   }
 });
 

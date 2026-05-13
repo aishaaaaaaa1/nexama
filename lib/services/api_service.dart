@@ -56,11 +56,9 @@ class ApiService {
     return response;
   }
 
-  // Gérer la déconnexion automatique si token expiré
+  // Ne déconnecter que sur 401 (session expirée). Un 403 peut être une règle métier (ex. mauvais id URL) — ne pas effacer le token.
   static void _handleAuthErrors(http.Response response) {
-    if (response.statusCode == 401 || response.statusCode == 403) {
-      // Dans une app Flutter complète, on utiliserait un EventBus ou un GlobalKey<NavigatorState> 
-      // pour rediriger vers la page de login, mais pour l'instant on supprime juste le token.
+    if (response.statusCode == 401) {
       AuthService.logout();
     }
   }

@@ -6,19 +6,19 @@ import '../services/auth_service.dart';
 import '../widgets/chatbot_widget.dart';
 import 'login_page.dart';
 import 'prestataire/services_page.dart';
+import 'prestataire/matching_ia_prestataire_page.dart';
 import 'prestataire/commandes_page.dart';
 import 'prestataire/revenus_page.dart';
-import 'prestataire/pipeline_page.dart';
-import 'prestataire/portfolio_page.dart';
-import 'prestataire/profil_public_page.dart';
+import 'prestataire/mes_clients_prestataire_page.dart';
+import 'prestataire/mes_devis_prestataire_page.dart';
 import 'prestataire/propose_service_page.dart';
 import 'prestataire/disponibilites_page.dart';
-import 'prestataire/avis_evaluations_page.dart';
 import 'prestataire/transactions_page.dart';
-import 'prestataire/documents_page.dart';
+import 'prestataire/avis_clients_prestataire_page.dart';
+import 'prestataire/statistiques_page.dart';
+import 'prestataire/pipeline_page.dart';
 import 'prestataire/parametres_page.dart';
-import 'prestataire/marketplace_page.dart';
-import 'investisseur/messages_page.dart';
+import 'prestataire/messages_secure_prestataire_page.dart';
 import 'shared/premium_upgrade_page.dart';
 import '../widgets/notifications_panel.dart';
 import 'shared/support_page.dart';
@@ -383,48 +383,55 @@ class _PrestataireDashboardState extends State<PrestataireDashboard> {
 
   Widget _buildSelectedContent() {
     switch (_selectedNav) {
-      case 0: return _buildMainContent();
-      case 1: return MarketplacePrestatairePage(userData: widget.userData);
-      case 2: return MesServicesPage(userData: widget.userData);
-      case 3: return CommandesPrestatairePage(userData: widget.userData);
-      case 4: return MessagesPage(userData: widget.userData);
-      case 5: return AvisEvaluationsPage(userData: widget.userData);
-      case 6: return PortfolioPage(userData: widget.userData);
-      case 7: return DisponibilitesPage(userData: widget.userData);
-      case 8: return RevenusPrestatairePage(userData: widget.userData);
-      case 9: return TransactionsPrestatairePage(userData: widget.userData);
-      case 10: return PipelinePage(userData: widget.userData);
-      case 11: return DocumentsPrestatairePage(userData: widget.userData);
-      case 12: return ProfilPublicPage(userData: widget.userData);
-      case 13: return ParametresPage(userData: widget.userData);
-      case 14: return PremiumUpgradePage(userData: widget.userData);
-      case 15: return QuizEvaluationsPage(userData: widget.userData);
-      case 16: return LivesWebinairesPage(userData: widget.userData);
-      case 17: return ApprenantsFormateurPage(userData: widget.userData);
-      case 18: return SupportPage(userData: widget.userData);
-      default: return _buildMainContent();
+      case 0:
+        return _buildMainContent();
+      case 1:
+        return CommandesPrestatairePage(userData: widget.userData);
+      case 2:
+        return ProposeServicePage(
+          userData: widget.userData,
+          onPopRequested: () => setState(() => _selectedNav = 3),
+          onPublishSuccess: () => setState(() => _selectedNav = 3),
+        );
+      case 3:
+        return MesServicesPage(userData: widget.userData);
+      case 4:
+        return MatchingIAPrestatairePage(userData: widget.userData);
+      case 5:
+        return MessagesSecurePrestatairePage(userData: widget.userData);
+      case 6:
+        return MesDevisPrestatairePage(userData: widget.userData);
+      case 7:
+        return TransactionsPrestatairePage(userData: widget.userData);
+      case 8:
+        return PipelinePage(userData: widget.userData);
+      case 9:
+        return DisponibilitesPage(userData: widget.userData);
+      case 10:
+        return MesClientsPrestatairePage(userData: widget.userData);
+      case 11:
+        return AvisClientsPrestatairePage(userData: widget.userData);
+      case 12:
+        return StatistiquesPage(userData: widget.userData);
+      case 13:
+        return RevenusPrestatairePage(userData: widget.userData);
+      case 14:
+        return PremiumUpgradePage(userData: widget.userData);
+      case 15:
+        return QuizEvaluationsPage(userData: widget.userData);
+      case 16:
+        return LivesWebinairesPage(userData: widget.userData);
+      case 17:
+        return ApprenantsFormateurPage(userData: widget.userData);
+      case 18:
+        return SupportPage(userData: widget.userData);
+      case 19:
+        return ProfilePage(userData: widget.userData);
+      case 20:
+        return ParametresPage(userData: widget.userData);
+      default:
+        return _buildMainContent();
     }
-  }
-
-  Widget _buildPlaceholderPage(String title, IconData icon, String subtitle) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 80, color: const Color(0xFFCBD5E1)),
-          const SizedBox(height: 24),
-          Text(title, style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold, color: NexaColors.darkNavy)),
-          const SizedBox(height: 8),
-          Text(subtitle, style: const TextStyle(color: Colors.grey, fontSize: 16)),
-          const SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(backgroundColor: NexaColors.primaryGreen, foregroundColor: Colors.white),
-            child: const Text('Action à venir'),
-          )
-        ],
-      ),
-    );
   }
 
   // ────────────── MAIN CONTENT ──────────────
@@ -910,7 +917,7 @@ class _PrestataireDashboardState extends State<PrestataireDashboard> {
   }
 
   String _getFirstName() {
-    final name = widget.userData?['nom_complet'] as String? ?? 'Sara Benali';
+    final name = widget.userData?['nom_complet'] as String? ?? 'Test';
     return name.trim().split(' ').first;
   }
 }

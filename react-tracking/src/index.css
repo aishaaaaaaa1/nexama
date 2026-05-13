@@ -1,0 +1,19 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root{
+  --violet-600:#7c3aed;
+  --muted:#6b7280;
+}
+
+html,body,#root{height:100%;}
+
+/* glassmorphism helper */
+.glass{
+  background: rgba(255,255,255,0.7);
+  backdrop-filter: blur(6px) saturate(120%);
+}
+
+/* small utility for subtle shadow */
+.shadow-soft{box-shadow: 0 6px 18px rgba(16,24,40,0.06);}
