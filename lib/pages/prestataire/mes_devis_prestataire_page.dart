@@ -558,7 +558,7 @@ class _MesDevisPrestatairePageState extends State<MesDevisPrestatairePage> with 
 
   Widget _ddStatut() {
     return DropdownButtonFormField<_DevisStatut?>(
-      value: _filtreStatut,
+      initialValue: _filtreStatut,
       decoration: _dec('Statut', Icons.flag_outlined),
       items: [
         DropdownMenuItem(value: null, child: Text('Tous les statuts', style: GoogleFonts.inter(fontSize: 13))),
@@ -573,7 +573,7 @@ class _MesDevisPrestatairePageState extends State<MesDevisPrestatairePage> with 
   Widget _ddSecteur() {
     const secteurs = ['Tous', 'E-commerce', 'Design', 'Tech', 'Marketing', 'Data'];
     return DropdownButtonFormField<String>(
-      value: _filtreSecteur,
+      initialValue: _filtreSecteur,
       decoration: _dec('Secteur', Icons.category_outlined),
       items: secteurs.map((s) => DropdownMenuItem(value: s, child: Text(s, style: GoogleFonts.inter(fontSize: 13)))).toList(),
       onChanged: (v) => setState(() => _filtreSecteur = v ?? 'Tous'),

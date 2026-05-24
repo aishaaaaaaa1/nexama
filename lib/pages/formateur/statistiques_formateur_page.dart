@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/formateur/formateur_ui.dart';
 
 class StatistiquesFormateurPage extends StatelessWidget {
   final Map<String, dynamic>? userData;
@@ -9,83 +10,106 @@ class StatistiquesFormateurPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text('Statistiques & Performance', style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold, color: NexaColors.darkNavy)),
-        const SizedBox(height: 24),
-        Row(
-          children: [
-            _buildStatCard('Taux de complétion moyen', '68%', Icons.check_circle_outline, NexaColors.primaryGreen),
-            const SizedBox(width: 16),
-            _buildStatCard('Note moyenne', '4.8/5', Icons.star_border, Colors.orange),
-            const SizedBox(width: 16),
-            _buildStatCard('Nouveaux inscrits', '+124', Icons.trending_up, Colors.blue),
-          ],
-        ),
-        const SizedBox(height: 24),
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE2E8F0))),
-          child: Column(
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const FormateurPageHeader(
+            title: 'Statistiques',
+            subtitle: 'Performance pédagogique, inscriptions et satisfaction.',
+          ),
+          const SizedBox(height: 20),
+          const FormateurStatsRow(
+            items: [
+              FormateurStatItem(label: 'Complétion moy.', value: '68 %', icon: Icons.check_circle_outline, color: NexaColors.primaryGreen),
+              FormateurStatItem(label: 'Note moyenne', value: '4.8 / 5', icon: Icons.star_border, color: Colors.amber),
+              FormateurStatItem(label: 'Nouveaux inscrits', value: '+124', icon: Icons.person_add_alt_1, color: Colors.blue, hint: 'Ce trimestre'),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Inscriptions mensuelles', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              const SizedBox(height: 32),
-              SizedBox(
-                height: 250,
-                child: LineChart(
-                  LineChartData(
-                    gridData: const FlGridData(show: false),
-                    borderData: FlBorderData(show: false),
-                    titlesData: const FlTitlesData(show: false),
-                    lineBarsData: [
-                      LineChartBarData(
-                        spots: const [
-                          FlSpot(0, 10),
-                          FlSpot(1, 25),
-                          FlSpot(2, 40),
-                          FlSpot(3, 30),
-                          FlSpot(4, 55),
+              Expanded(
+                flex: 2,
+                child: FormateurSectionCard(
+                  title: 'Inscriptions mensuelles',
+                  child: SizedBox(
+                    height: 260,
+                    child: LineChart(
+                      LineChartData(
+                        gridData: FlGridData(show: true, drawVerticalLine: false, getDrawingHorizontalLine: (v) => FlLine(color: const Color(0xFFE2E8F0), strokeWidth: 1)),
+                        borderData: FlBorderData(show: false),
+                        titlesData: FlTitlesData(
+                          leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              getTitlesWidget: (v, _) {
+                                const labels = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai'];
+                                final i = v.toInt();
+                                if (i < 0 || i >= labels.length) return const SizedBox.shrink();
+                                return Padding(padding: const EdgeInsets.only(top: 8), child: Text(labels[i], style: GoogleFonts.inter(fontSize: 11, color: FormateurColors.muted)));
+                              },
+                            ),
+                          ),
+                        ),
+                        lineBarsData: [
+                          LineChartBarData(
+                            spots: const [FlSpot(0, 10), FlSpot(1, 25), FlSpot(2, 40), FlSpot(3, 30), FlSpot(4, 55)],
+                            isCurved: true,
+                            color: NexaColors.primaryGreen,
+                            barWidth: 4,
+                            dotData: const FlDotData(show: true),
+                            belowBarData: BarAreaData(show: true, color: NexaColors.primaryGreen.withValues(alpha: 0.15)),
+                          ),
                         ],
-                        isCurved: true,
-                        color: NexaColors.primaryGreen,
-                        barWidth: 4,
-                        isStrokeCapRound: true,
-                        belowBarData: BarAreaData(show: true, color: NexaColors.primaryGreen.withValues(alpha: 0.2)),
                       ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: FormateurSectionCard(
+                  title: 'Répartition par cours',
+                  child: Column(
+                    children: [
+                      _barRow('Flutter', 0.45, FormateurColors.accent),
+                      const SizedBox(height: 14),
+                      _barRow('Marketing', 0.35, NexaColors.primaryGreen),
+                      const SizedBox(height: 14),
+                      _barRow('SEO', 0.20, Colors.orange),
                     ],
                   ),
                 ),
               ),
             ],
           ),
-        )
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildStatCard(String title, String val, IconData icon, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE2E8F0))),
-        child: Row(
+  static Widget _barRow(String label, double pct, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle), child: Icon(icon, color: color)),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(title, style: const TextStyle(color: Colors.grey, fontSize: 12), overflow: TextOverflow.ellipsis),
-                  Text(val, style: GoogleFonts.inter(fontSize: 20, fontWeight: FontWeight.bold, color: NexaColors.darkNavy)),
-                ],
-              ),
-            ),
+            Text(label, style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 13)),
+            Text('${(pct * 100).round()} %', style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: color)),
           ],
         ),
-      ),
+        const SizedBox(height: 6),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(value: pct, minHeight: 8, color: color, backgroundColor: const Color(0xFFF1F5F9)),
+        ),
+      ],
     );
   }
 }

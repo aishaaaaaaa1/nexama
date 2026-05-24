@@ -53,9 +53,20 @@ console.log(
 );
 for (const p of ports) killListenersOnPort(p);
 
-const result = spawnSync('npx', ['prisma', 'generate'], {
+// Use project-local Prisma (avoids npx downloading Prisma 7+ into npm-cache when disk is tight).
+const prismaCli = path.join(BACKEND_ROOT, 'node_modules', 'prisma', 'build', 'index.js');
+if (!fs.existsSync(prismaCli)) {
+  console.error(
+    '[prisma-generate-safe] Prisma not installed. From backend folder run:\n' +
+      '  npm install\n' +
+      '  npm run prisma:generate'
+  );
+  process.exit(1);
+}
+
+const result = spawnSync(process.execPath, [prismaCli, 'generate'], {
   cwd: BACKEND_ROOT,
   stdio: 'inherit',
-  shell: true,
+  env: process.env,
 });
 process.exit(result.status ?? 1);

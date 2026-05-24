@@ -575,7 +575,7 @@ class _MesClientsPrestatairePageState extends State<MesClientsPrestatairePage> w
       decoration: _inputDec('Recherche client…', Icons.search_rounded),
     );
     final ville = DropdownButtonFormField<String>(
-      value: _ville,
+      initialValue: _ville,
       decoration: _inputDec('Ville', Icons.location_on_outlined),
       items: const [
         DropdownMenuItem(value: 'Toutes', child: Text('Toutes les villes')),
@@ -586,7 +586,7 @@ class _MesClientsPrestatairePageState extends State<MesClientsPrestatairePage> w
       onChanged: (v) => setState(() => _ville = v ?? 'Toutes'),
     );
     final secteur = DropdownButtonFormField<String>(
-      value: _secteur,
+      initialValue: _secteur,
       decoration: _inputDec('Secteur', Icons.category_outlined),
       items: const [
         DropdownMenuItem(value: 'Tous', child: Text('Tous secteurs')),
@@ -598,7 +598,7 @@ class _MesClientsPrestatairePageState extends State<MesClientsPrestatairePage> w
       onChanged: (v) => setState(() => _secteur = v ?? 'Tous'),
     );
     final statut = DropdownButtonFormField<_ClientStatutCRM?>(
-      value: _statutFiltre,
+      initialValue: _statutFiltre,
       decoration: _inputDec('Statut', Icons.flag_outlined),
       items: const [
         DropdownMenuItem(value: null, child: Text('Tous statuts')),
@@ -609,7 +609,7 @@ class _MesClientsPrestatairePageState extends State<MesClientsPrestatairePage> w
       onChanged: (v) => setState(() => _statutFiltre = v),
     );
     final budget = DropdownButtonFormField<String>(
-      value: _budget,
+      initialValue: _budget,
       decoration: _inputDec('Budget', Icons.payments_outlined),
       items: const [
         DropdownMenuItem(value: 'Tous', child: Text('Tous budgets')),

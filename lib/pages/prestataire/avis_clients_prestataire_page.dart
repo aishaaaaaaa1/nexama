@@ -443,7 +443,7 @@ class _AvisClientsPrestatairePageState extends State<AvisClientsPrestatairePage>
     );
     final search = TextField(controller: _searchCtrl, onChanged: (_) => setState(() {}), decoration: dec.copyWith(hintText: 'Recherche avis…', prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF94A3B8))));
     final note = DropdownButtonFormField<int?>(
-      value: _filtreStars,
+      initialValue: _filtreStars,
       decoration: dec.copyWith(labelText: 'Note', prefixIcon: const Icon(Icons.star_outline, color: Color(0xFF94A3B8))),
       items: const [
         DropdownMenuItem(value: null, child: Text('Toutes notes')),
@@ -454,7 +454,7 @@ class _AvisClientsPrestatairePageState extends State<AvisClientsPrestatairePage>
       onChanged: (v) => setState(() => _filtreStars = v),
     );
     final client = DropdownButtonFormField<String>(
-      value: _filtreClient,
+      initialValue: _filtreClient,
       decoration: dec.copyWith(labelText: 'Client', prefixIcon: const Icon(Icons.business_outlined, color: Color(0xFF94A3B8))),
       items: [
         const DropdownMenuItem(value: 'Tous', child: Text('Tous clients')),
@@ -463,7 +463,7 @@ class _AvisClientsPrestatairePageState extends State<AvisClientsPrestatairePage>
       onChanged: (v) => setState(() => _filtreClient = v ?? 'Tous'),
     );
     final projet = DropdownButtonFormField<String>(
-      value: _filtreProjet,
+      initialValue: _filtreProjet,
       decoration: dec.copyWith(labelText: 'Projet', prefixIcon: const Icon(Icons.folder_outlined, color: Color(0xFF94A3B8))),
       items: [
         const DropdownMenuItem(value: 'Tous', child: Text('Tous projets')),
@@ -472,7 +472,7 @@ class _AvisClientsPrestatairePageState extends State<AvisClientsPrestatairePage>
       onChanged: (v) => setState(() => _filtreProjet = v ?? 'Tous'),
     );
     final statut = DropdownButtonFormField<String>(
-      value: _statutReponse,
+      initialValue: _statutReponse,
       decoration: dec.copyWith(labelText: 'Statut réponse', prefixIcon: const Icon(Icons.mark_chat_read_outlined, color: Color(0xFF94A3B8))),
       items: const [
         DropdownMenuItem(value: 'Tous', child: Text('Tous')),

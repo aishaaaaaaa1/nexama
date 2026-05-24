@@ -102,9 +102,12 @@ async function main() {
       prestataire_id: prestataire.id,
       titre: 'Développement d\'Applications Mobile Flutter',
       categorie: 'Développement',
-      prix_base: 5000,
-      description: 'Création d\'applications performantes pour iOS et Android.'
-    }
+      description: 'Création d\'applications performantes pour iOS et Android.',
+      prix_basique: 5000,
+      prix_standard: 7500,
+      delai_livraison: 21,
+      tags: ['flutter', 'mobile'],
+    },
   });
 
   // Formateur Course
@@ -113,10 +116,11 @@ async function main() {
       formateur_id: formateur.id,
       titre: 'Devenir Freelance au Maroc',
       description: 'Guide complet pour lancer son activité de prestataire.',
+      categorie: 'Business',
+      niveau: 'debutant',
       prix: 199,
-      format_media: 'Vidéo',
-      duree_minutes: 180
-    }
+      duree_totale: 180,
+    },
   });
 
   console.log('Mock data seeded successfully');

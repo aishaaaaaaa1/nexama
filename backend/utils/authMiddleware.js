@@ -23,4 +23,14 @@ const verifyToken = (req, res, next) => {
   }
 };
 
-module.exports = { verifyToken };
+/** Autorise les appels sans token (démo / dev) ; utilise le JWT si présent. */
+const verifyTokenOptional = (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    req.user = { id: req.params?.id || 'user_123', role: 'formateur' };
+    return next();
+  }
+  return verifyToken(req, res, next);
+};
+
+module.exports = { verifyToken, verifyTokenOptional };

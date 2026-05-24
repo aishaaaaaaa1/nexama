@@ -71,19 +71,22 @@ async function seed() {
       prestataire_id: users.prestataire.id,
       titre: 'Développement Dashboard Analytique',
       categorie: 'IT & Digital',
-      prix_base: 15000,
-      description: 'Création d\'un dashboard sur mesure pour le suivi des données agricoles.'
-    }
+      description: 'Création d\'un dashboard sur mesure pour le suivi des données agricoles.',
+      prix_basique: 15000,
+      prix_standard: 22000,
+      delai_livraison: 14,
+      tags: ['dashboard', 'analytics'],
+    },
   });
 
   await prisma.commandes_b2b.create({
     data: {
       service_id: service.id,
       client_id: users.entrepreneur.id,
-      montant: 15000,
-      statut_paiement: 'paye',
-      statut_livraison: 'en_cours'
-    }
+      prestataire_id: users.prestataire.id,
+      montant_total: 15000,
+      statut: 'EN_COURS',
+    },
   });
 
   console.log('✅ Anas a commandé un dashboard chez Yassine Digital.');
@@ -94,10 +97,11 @@ async function seed() {
       formateur_id: users.formateur.id,
       titre: 'Marketing Digital pour Startups Marocaines',
       description: 'Comment acquérir ses 1000 premiers clients au Maroc.',
+      categorie: 'Marketing',
+      niveau: 'debutant',
       prix: 490,
-      format_media: 'Video',
-      duree_minutes: 180
-    }
+      duree_totale: 180,
+    },
   });
 
   const post = await prisma.forum_posts.create({

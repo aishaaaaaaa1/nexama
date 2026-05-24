@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../config/api_config.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/formateur/formateur_ui.dart';
 
 typedef _LiveRow = Map<String, dynamic>;
 
@@ -20,6 +21,8 @@ class LivesWebinairesPage extends StatefulWidget {
 class _LivesWebinairesPageState extends State<LivesWebinairesPage> {
   bool _isLoading = true;
   final List<_LiveRow> _lives = [];
+
+  String get _formateurId => widget.userData?['id']?.toString() ?? 'user_123';
 
   static List<_LiveRow> _seedLives() => [
         {
@@ -67,8 +70,7 @@ class _LivesWebinairesPageState extends State<LivesWebinairesPage> {
   Future<void> _fetchLives() async {
     setState(() => _isLoading = true);
     try {
-      final userId = widget.userData?['id'] ?? 'user_123';
-      final response = await ApiService.get(ApiConfig.uri('/api/formateur/lives/$userId'));
+      final response = await ApiService.get(ApiConfig.uri('/api/formateur/lives/$_formateurId'));
       if (response.statusCode == 200) {
         final decoded = json.decode(response.body);
         if (decoded is List) {
@@ -102,7 +104,18 @@ class _LivesWebinairesPageState extends State<LivesWebinairesPage> {
   Future<void> _openProgrammerLive() async {
     final created = await _ProgrammerLiveSheet.show(context);
     if (!mounted || created == null) return;
-    setState(() => _lives.insert(0, created));
+    var row = created;
+    try {
+      final response = await ApiService.post(ApiConfig.uri('/api/formateur/lives/$_formateurId'), body: created);
+      if (response.statusCode == 201) {
+        final decoded = json.decode(response.body);
+        if (decoded is Map && decoded['live'] is Map) {
+          row = _normalizeLive(decoded['live'], 0);
+        }
+      }
+    } catch (_) {}
+    if (!mounted) return;
+    setState(() => _lives.insert(0, row));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Live « ${created['titre']} » programmé.', style: GoogleFonts.inter(fontWeight: FontWeight.w500)),
@@ -131,6 +144,10 @@ class _LivesWebinairesPageState extends State<LivesWebinairesPage> {
     );
     if (ok != true || !mounted) return;
     final id = live['id'];
+    try {
+      await ApiService.delete(ApiConfig.uri('/api/formateur/lives/$_formateurId/$id'));
+    } catch (_) {}
+    if (!mounted) return;
     setState(() => _lives.removeWhere((e) => e['id'] == id));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('« $titre » supprimé.', style: GoogleFonts.inter(fontWeight: FontWeight.w500)), behavior: SnackBarBehavior.floating),
@@ -140,43 +157,58 @@ class _LivesWebinairesPageState extends State<LivesWebinairesPage> {
   Future<void> _gererLive(_LiveRow live) async {
     final updated = await _GererLiveSheet.show(context, live);
     if (!mounted || updated == null) return;
+    var row = updated;
+    try {
+      final response = await ApiService.put(ApiConfig.uri('/api/formateur/lives/$_formateurId/${updated['id']}'), body: updated);
+      if (response.statusCode == 200) {
+        final decoded = json.decode(response.body);
+        if (decoded is Map && decoded['live'] is Map) {
+          row = _normalizeLive(decoded['live'], 0);
+        }
+      }
+    } catch (_) {}
+    if (!mounted) return;
     setState(() {
-      final i = _lives.indexWhere((e) => e['id'] == updated['id']);
-      if (i >= 0) _lives[i] = updated;
+      final i = _lives.indexWhere((e) => e['id'] == row['id']);
+      if (i >= 0) _lives[i] = row;
     });
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Live mis à jour.', style: GoogleFonts.inter(fontWeight: FontWeight.w500)), behavior: SnackBarBehavior.floating),
     );
   }
 
+  int get _totalInscrits => _lives.fold<int>(0, (s, l) => s + (l['inscrits'] as int? ?? 0));
+
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_isLoading) return const FormateurLoading();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Lives & Webinaires', style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold, color: NexaColors.darkNavy)),
-                const Text('Interagissez en direct avec vos apprenants.', style: TextStyle(color: Colors.grey)),
-              ],
-            ),
-            ElevatedButton.icon(
-              onPressed: _openProgrammerLive,
-              icon: const Icon(Icons.add),
-              label: const Text('Programmer un Live'),
-              style: ElevatedButton.styleFrom(backgroundColor: NexaColors.primaryGreen, foregroundColor: Colors.white),
-            ),
+        FormateurPageHeader(
+          title: 'Lives & webinaires',
+          subtitle: 'Sessions en direct, Q&A et webinaires thématiques.',
+          trailing: ElevatedButton.icon(
+            onPressed: _openProgrammerLive,
+            icon: const Icon(Icons.add),
+            label: const Text('Programmer un live'),
+            style: formateurGreenStyle(),
+          ),
+        ),
+        const SizedBox(height: 20),
+        FormateurStatsRow(
+          items: [
+            FormateurStatItem(label: 'Sessions', value: '${_lives.length}', icon: Icons.live_tv, color: Colors.red),
+            FormateurStatItem(label: 'Inscrits total', value: '$_totalInscrits', icon: Icons.people_outline, color: FormateurColors.accent),
+            FormateurStatItem(label: 'Prochain live', value: _lives.isNotEmpty ? '${_lives.last['date']}' : '—', icon: Icons.event, color: NexaColors.primaryGreen),
           ],
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 24),
         Expanded(
-          child: ListView.separated(
+          child: _lives.isEmpty
+              ? FormateurEmptyState(icon: Icons.videocam_outlined, title: 'Aucun live programmé', message: 'Planifiez votre prochaine session en direct.', actionLabel: 'Programmer', onAction: _openProgrammerLive)
+              : ListView.separated(
             itemCount: _lives.length,
             separatorBuilder: (c, _) => const SizedBox(height: 16),
             itemBuilder: (context, index) {

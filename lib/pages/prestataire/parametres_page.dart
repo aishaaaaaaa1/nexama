@@ -411,7 +411,7 @@ class _ParametresPageState extends State<ParametresPage> with SingleTickerProvid
     return Padding(
       padding: const EdgeInsets.only(bottom: 14),
       child: DropdownButtonFormField<String>(
-        value: value,
+        initialValue: value,
         decoration: InputDecoration(
           labelText: label,
           filled: true,

@@ -41,6 +41,7 @@ dependencies:
   google_sign_in: ^6.2.1
   shared_preferences: ^2.5.5
   flutter_markdown: ^0.7.2
+  file_picker: ^8.1.7
 
 dev_dependencies:
   flutter_test:

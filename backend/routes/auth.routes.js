@@ -348,7 +348,7 @@ router.post('/login', async (req, res) => {
         }
         
         if (role === 'prestataire') {
-          const service = await prisma.services_b2b.upsert({
+          await prisma.services_b2b.upsert({
             where: { id: '00000000-0000-0000-0000-000000000003' },
             update: {},
             create: {
@@ -356,9 +356,13 @@ router.post('/login', async (req, res) => {
               prestataire_id: user.id,
               titre: 'Développement Dashboard Analytique',
               categorie: 'IT & Digital',
-              prix_base: 15000,
-              description: 'Dashboard sur mesure.'
-            }
+              description: 'Dashboard sur mesure.',
+              prix_basique: 15000,
+              prix_standard: 22000,
+              prix_premium: 30000,
+              delai_livraison: 14,
+              tags: ['dashboard', 'analytics'],
+            },
           });
         }
 
@@ -371,10 +375,11 @@ router.post('/login', async (req, res) => {
               formateur_id: user.id,
               titre: 'Marketing Digital pour Startups',
               description: 'Formation complète.',
+              categorie: 'Marketing',
+              niveau: 'debutant',
               prix: 490,
-              format_media: 'Video',
-              duree_minutes: 180
-            }
+              duree_totale: 180,
+            },
           });
         }
 

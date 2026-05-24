@@ -47,6 +47,15 @@ class ApiService {
     return response;
   }
 
+  // Wrapper pour http.patch
+  static Future<http.Response> patch(Uri url, {Map<String, String>? headers, Object? body, Encoding? encoding}) async {
+    final authHeaders = await _getHeaders(headers);
+    final jsonBody = (body is Map || body is List) ? json.encode(body) : body;
+    final response = await http.patch(url, headers: authHeaders, body: jsonBody, encoding: encoding);
+    _handleAuthErrors(response);
+    return response;
+  }
+
   // Wrapper pour http.delete
   static Future<http.Response> delete(Uri url, {Map<String, String>? headers, Object? body, Encoding? encoding}) async {
     final authHeaders = await _getHeaders(headers);

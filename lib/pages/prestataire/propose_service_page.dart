@@ -172,7 +172,7 @@ class _ProposeServicePageState extends State<ProposeServicePage> {
                   ),
                   const SizedBox(height: 16),
                   DropdownButtonFormField<String>(
-                    value: _categorie,
+                    initialValue: _categorie,
                     decoration: const InputDecoration(labelText: 'Catégorie', border: OutlineInputBorder()),
                     items: ['Design', 'IT & Développement', 'Marketing', 'Rédaction', 'Conseil'].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
                     onChanged: (v) => setState(() => _categorie = v!),

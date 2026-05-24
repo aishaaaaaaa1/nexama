@@ -18,8 +18,8 @@ import 'formateur/rapports_page.dart';
 import 'formateur/profil_formateur_page.dart';
 import 'formateur/paiement_page.dart';
 import 'prestataire/parametres_page.dart';
-import 'investisseur/messages_page.dart';
-import 'shared/premium_upgrade_page.dart';
+import 'formateur/messages_formateur_page.dart';
+import '../../widgets/formateur/formateur_ui.dart';
 import '../widgets/notifications_panel.dart';
 import 'shared/support_page.dart';
 import 'profile_page.dart';
@@ -34,7 +34,10 @@ class FormateurDashboard extends StatefulWidget {
 
 class _FormateurDashboardState extends State<FormateurDashboard> {
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey<MesCoursPageState> _mesCoursKey = GlobalKey<MesCoursPageState>();
+  final GlobalKey<MessagesFormateurPageState> _messagesKey = GlobalKey<MessagesFormateurPageState>();
   int _selectedNav = 0;
+  int _messagesUnread = 0;
   bool _isSidebarCollapsed = false;
 
   @override
@@ -53,7 +56,7 @@ class _FormateurDashboardState extends State<FormateurDashboard> {
               decoration: BoxDecoration(
                 color: NexaColors.darkNavy,
                 borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16), bottomLeft: Radius.circular(16), bottomRight: Radius.circular(4)),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4))],
               ),
               child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -150,7 +153,13 @@ class _FormateurDashboardState extends State<FormateurDashboard> {
                   _buildNavItem(4, Icons.videocam_outlined, 'Lives & Webinaires'),
                   if (!_isSidebarCollapsed) const Padding(padding: EdgeInsets.only(left: 12, top: 16, bottom: 8), child: Text('APPRENANTS', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold))),
                   _buildNavItem(5, Icons.people_outline, 'Mes apprenants'),
-                  _buildNavItem(6, Icons.chat_bubble_outline, 'Messages', badge: '12', badgeColor: NexaColors.primaryGreen),
+                  _buildNavItem(
+                    6,
+                    Icons.chat_bubble_outline,
+                    'Messages',
+                    badge: _messagesUnread > 0 ? '$_messagesUnread' : null,
+                    badgeColor: NexaColors.primaryGreen,
+                  ),
                   _buildNavItem(7, Icons.star_border_outlined, 'Avis & commentaires'),
                   if (!_isSidebarCollapsed) const Padding(padding: EdgeInsets.only(left: 12, top: 16, bottom: 8), child: Text('ANALYSES', style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.bold))),
                   _buildNavItem(8, Icons.analytics_outlined, 'Statistiques'),
@@ -372,25 +381,59 @@ class _FormateurDashboardState extends State<FormateurDashboard> {
   Widget _buildSelectedContent() {
     switch (_selectedNav) {
       case 0: return _buildMainContent();
-      case 1: return MesCoursPage(userData: widget.userData);
-      case 2: return CreerCoursPage(userData: widget.userData);
+      case 1: return MesCoursPage(
+            key: _mesCoursKey,
+            userData: widget.userData,
+            onCreateCourse: () => setState(() => _selectedNav = 2),
+          );
+      case 2: return CreerCoursPage(
+            userData: widget.userData,
+            onPublished: () => _mesCoursKey.currentState?.refresh(),
+          );
       case 3: return QuizEvaluationsPage(userData: widget.userData);
       case 4: return LivesWebinairesPage(userData: widget.userData);
-      case 5: return ApprenantsFormateurPage(userData: widget.userData);
-      case 6: return MessagesPage(userData: widget.userData);
+      case 5: return ApprenantsFormateurPage(
+            userData: widget.userData,
+            onContactLearner: (conversationId) {
+              setState(() => _selectedNav = 6);
+              if (conversationId != null) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _messagesKey.currentState?.openConversation(conversationId);
+                });
+              }
+            },
+          );
+      case 6: return MessagesFormateurPage(
+            key: _messagesKey,
+            userData: widget.userData,
+            onUnreadChanged: (n) {
+              if (_messagesUnread != n) setState(() => _messagesUnread = n);
+            },
+          );
       case 7: return AvisCommentairesPage(userData: widget.userData);
       case 8: return StatistiquesFormateurPage(userData: widget.userData);
       case 9: return RevenusFormateurPage(userData: widget.userData);
       case 10: return EngagementPage(userData: widget.userData);
       case 11: return RapportsPage(userData: widget.userData);
       case 12: return ProfilFormateurPage(userData: widget.userData);
-      case 13: return ParametresPage(userData: widget.userData);
+      case 13: return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const FormateurPageHeader(
+              title: 'Configuration',
+              subtitle: 'Notifications, quiz automatiques et préférences de votre espace formateur.',
+            ),
+            const SizedBox(height: 12),
+            Expanded(child: ParametresPage(userData: widget.userData)),
+          ],
+        );
       case 14: return PaiementFormateurPage(userData: widget.userData);
       case 15: return SupportPage(userData: widget.userData);
       default: return _buildMainContent();
     }
   }
 
+  // ignore: unused_element
   Widget _buildPlaceholderPage(String title, IconData icon, String subtitle) {
     return Center(
       child: Column(
@@ -610,7 +653,13 @@ class _FormateurDashboardState extends State<FormateurDashboard> {
               const SizedBox(width: 16),
               _buildActionButton(Icons.download_outlined, 'Télécharger rapport', color: const Color(0xFF3B82F6), bgOverride: const Color(0xFFEFF6FF), onTap: () => setState(() => _selectedNav = 11)),
               const SizedBox(width: 16),
-              _buildActionButton(Icons.chat_bubble_outline, 'Messages (12)', color: const Color(0xFF8B5CF6), bgOverride: const Color(0xFFF5F3FF), onTap: () => setState(() => _selectedNav = 6)),
+              _buildActionButton(
+                Icons.chat_bubble_outline,
+                _messagesUnread > 0 ? 'Messages ($_messagesUnread)' : 'Messages',
+                color: const Color(0xFF8B5CF6),
+                bgOverride: const Color(0xFFF5F3FF),
+                onTap: () => setState(() => _selectedNav = 6),
+              ),
             ],
           ),
         ),
@@ -624,7 +673,7 @@ class _FormateurDashboardState extends State<FormateurDashboard> {
     return Container(
       height: height,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE2E8F0)), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))]),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE2E8F0)), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))]),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -693,7 +742,7 @@ class _FormateurDashboardState extends State<FormateurDashboard> {
       children: [
         Column(
           children: [
-            Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle), child: Icon(icon, color: color, size: 14)),
+            Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle), child: Icon(icon, color: color, size: 14)),
             if (!isLast) Container(width: 1, height: 35, color: const Color(0xFFE2E8F0), margin: const EdgeInsets.symmetric(vertical: 4))
           ],
         ),
@@ -739,7 +788,7 @@ class _FormateurDashboardState extends State<FormateurDashboard> {
             flex: 4, 
             child: Row(
               children: [
-                Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: iconColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)), child: Icon(icon, color: iconColor, size: 20)),
+                Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: iconColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)), child: Icon(icon, color: iconColor, size: 20)),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -747,7 +796,7 @@ class _FormateurDashboardState extends State<FormateurDashboard> {
                     children: [
                       Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: NexaColors.darkNavy), overflow: TextOverflow.ellipsis),
                       const SizedBox(height: 4),
-                      Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(4)), child: Text(status, style: TextStyle(color: statusColor, fontSize: 9, fontWeight: FontWeight.bold))),
+                      Container(padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)), child: Text(status, style: TextStyle(color: statusColor, fontSize: 9, fontWeight: FontWeight.bold))),
                     ],
                   ),
                 ),

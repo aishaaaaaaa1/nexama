@@ -19,6 +19,7 @@ import 'prestataire/statistiques_page.dart';
 import 'prestataire/pipeline_page.dart';
 import 'prestataire/parametres_page.dart';
 import 'prestataire/messages_secure_prestataire_page.dart';
+import 'prestataire/profil_public_page.dart';
 import 'shared/premium_upgrade_page.dart';
 import '../widgets/notifications_panel.dart';
 import 'shared/support_page.dart';
@@ -56,7 +57,7 @@ class _PrestataireDashboardState extends State<PrestataireDashboard> {
               decoration: BoxDecoration(
                 color: NexaColors.darkNavy,
                 borderRadius: const BorderRadius.only(topLeft: Radius.circular(16), topRight: Radius.circular(16), bottomLeft: Radius.circular(16), bottomRight: Radius.circular(4)),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
+                boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4))],
               ),
               child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -426,7 +427,7 @@ class _PrestataireDashboardState extends State<PrestataireDashboard> {
       case 18:
         return SupportPage(userData: widget.userData);
       case 19:
-        return ProfilePage(userData: widget.userData);
+        return ProfilPublicPage(userData: widget.userData);
       case 20:
         return ParametresPage(userData: widget.userData);
       default:
@@ -589,7 +590,7 @@ class _PrestataireDashboardState extends State<PrestataireDashboard> {
                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                        children: [
                          const Text('Aujourd\'hui, 14:00', style: TextStyle(color: NexaColors.darkNavy, fontWeight: FontWeight.bold, fontSize: 14)),
-                         Icon(Icons.calendar_month, color: NexaColors.primaryGreen.withOpacity(0.3), size: 30)
+                         Icon(Icons.calendar_month, color: NexaColors.primaryGreen.withValues(alpha: 0.3), size: 30)
                        ],
                      ),
                      const Spacer(),
@@ -655,7 +656,7 @@ class _PrestataireDashboardState extends State<PrestataireDashboard> {
     return Container(
       height: height,
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE2E8F0)), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))]),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: const Color(0xFFE2E8F0)), boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4))]),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -749,7 +750,7 @@ class _PrestataireDashboardState extends State<PrestataireDashboard> {
               alignment: Alignment.centerLeft,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), 
-                decoration: BoxDecoration(color: statutColor.withOpacity(0.1), borderRadius: BorderRadius.circular(4)), 
+                decoration: BoxDecoration(color: statutColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)), 
                 child: Text(statut, style: TextStyle(color: statutColor, fontSize: 11, fontWeight: FontWeight.bold))
               ),
             )
@@ -766,7 +767,7 @@ class _PrestataireDashboardState extends State<PrestataireDashboard> {
       children: [
         Column(
           children: [
-            Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle), child: Icon(icon, color: color, size: 14)),
+            Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle), child: Icon(icon, color: color, size: 14)),
             if (!isLast) Container(width: 1, height: 35, color: const Color(0xFFE2E8F0), margin: const EdgeInsets.symmetric(vertical: 4))
           ],
         ),
@@ -804,9 +805,9 @@ class _PrestataireDashboardState extends State<PrestataireDashboard> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: iconColor.withOpacity(0.05),
+        color: iconColor.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: iconColor.withOpacity(0.1)),
+        border: Border.all(color: iconColor.withValues(alpha: 0.1)),
       ),
       child: Row(
         children: [

@@ -35,10 +35,12 @@ class _MesServicesPageState extends State<MesServicesPage> {
     try {
       final userId = await _resolveUserId();
       if (userId == null || userId.isEmpty) {
-        if (mounted) setState(() {
-          _services = [];
-          _isLoading = false;
-        });
+        if (mounted) {
+          setState(() {
+            _services = [];
+            _isLoading = false;
+          });
+        }
         return;
       }
       final response = await ApiService.get(ApiConfig.uri('/api/prestataire/services/$userId'));
@@ -82,7 +84,7 @@ class _MesServicesPageState extends State<MesServicesPage> {
     final userId = await _resolveUserId();
     if (userId == null || userId.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Session introuvable.')));
+        ScaffoldMessenger.of(this.context).showSnackBar(const SnackBar(content: Text('Session introuvable.')));
       }
       return;
     }
@@ -90,17 +92,17 @@ class _MesServicesPageState extends State<MesServicesPage> {
       final response = await ApiService.delete(ApiConfig.uri('/api/prestataire/services/$userId/$serviceId'));
       if (!mounted) return;
       if (response.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Service supprimé.')));
+        ScaffoldMessenger.of(this.context).showSnackBar(const SnackBar(content: Text('Service supprimé.')));
         await _fetchServices();
       } else if (response.statusCode == 404) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Service introuvable.')));
+        ScaffoldMessenger.of(this.context).showSnackBar(const SnackBar(content: Text('Service introuvable.')));
         await _fetchServices();
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Impossible de supprimer le service.')));
+        ScaffoldMessenger.of(this.context).showSnackBar(const SnackBar(content: Text('Impossible de supprimer le service.')));
       }
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Erreur réseau.')));
+        ScaffoldMessenger.of(this.context).showSnackBar(const SnackBar(content: Text('Erreur réseau.')));
       }
     }
   }

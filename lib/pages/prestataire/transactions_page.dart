@@ -64,7 +64,7 @@ class _TransactionsPrestatairePageState extends State<TransactionsPrestatairePag
                   return ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                     leading: CircleAvatar(
-                      backgroundColor: (isTermine ? Colors.green : Colors.orange).withOpacity(0.1),
+                      backgroundColor: (isTermine ? Colors.green : Colors.orange).withValues(alpha: 0.1),
                       child: Icon(isTermine ? Icons.check : Icons.access_time, color: isTermine ? Colors.green : Colors.orange),
                     ),
                     title: Text(tx['description'] ?? 'Transaction sans description', style: const TextStyle(fontWeight: FontWeight.bold)),

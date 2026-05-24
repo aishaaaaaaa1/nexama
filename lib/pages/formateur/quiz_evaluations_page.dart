@@ -1,23 +1,29 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+import '../../config/api_config.dart';
+import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/formateur/formateur_ui.dart';
 
 class _QuizItem {
   const _QuizItem({
     required this.id,
     required this.titre,
-    required this.coursLabel,
-    required this.questionsLabel,
-    required this.participationsLabel,
-    required this.moyenneLabel,
+    required this.cours,
+    required this.questions,
+    required this.participations,
+    required this.moyenne,
   });
 
   final String id;
   final String titre;
-  final String coursLabel;
-  final String questionsLabel;
-  final String participationsLabel;
-  final String moyenneLabel;
+  final String cours;
+  final int questions;
+  final int participations;
+  final String moyenne;
 }
 
 class QuizEvaluationsPage extends StatefulWidget {
@@ -29,41 +35,82 @@ class QuizEvaluationsPage extends StatefulWidget {
 }
 
 class _QuizEvaluationsPageState extends State<QuizEvaluationsPage> {
-  late final List<_QuizItem> _quizzes;
+  final List<_QuizItem> _quizzes = [];
+  bool _isLoading = true;
+
+  String get _formateurId => widget.userData?['id']?.toString() ?? 'user_123';
 
   @override
   void initState() {
     super.initState();
-    _quizzes = [
-      const _QuizItem(
-        id: 'seed-1',
-        titre: 'Quiz Final : Fondamentaux du Marketing',
-        coursLabel: 'Cours : Marketing Digital',
-        questionsLabel: '15 questions',
-        participationsLabel: '42 participations',
-        moyenneLabel: '85% moyenne',
-      ),
-      const _QuizItem(
-        id: 'seed-2',
-        titre: 'Auto-évaluation : SEO Technique',
-        coursLabel: 'Cours : SEO Avancé',
-        questionsLabel: '10 questions',
-        participationsLabel: '28 participations',
-        moyenneLabel: '72% moyenne',
-      ),
-    ];
+    _fetchQuizzes();
   }
 
-  Future<void> _openNouveauQuiz() async {
-    final created = await _CreerQuizAlertDialog.show(context);
-    if (!mounted || created == null) return;
-    setState(() => _quizzes.insert(0, created));
+  _QuizItem _quizFromJson(dynamic raw, int index) {
+    final m = raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
+    return _QuizItem(
+      id: m['id']?.toString() ?? 'quiz-$index',
+      titre: m['titre']?.toString() ?? 'Quiz sans titre',
+      cours: m['cours']?.toString() ?? 'Cours non defini',
+      questions: (m['questions'] as num?)?.toInt() ?? int.tryParse('${m['questions']}') ?? 0,
+      participations: (m['participations'] as num?)?.toInt() ?? int.tryParse('${m['participations']}') ?? 0,
+      moyenne: m['moyenne']?.toString() ?? '—',
+    );
+  }
+
+  Future<void> _fetchQuizzes() async {
+    setState(() => _isLoading = true);
+    try {
+      final response = await ApiService.get(ApiConfig.uri('/api/formateur/quiz/$_formateurId'));
+      if (response.statusCode == 200 && mounted) {
+        final decoded = json.decode(response.body);
+        setState(() {
+          _quizzes
+            ..clear()
+            ..addAll(decoded is List ? List.generate(decoded.length, (i) => _quizFromJson(decoded[i], i)) : const []);
+          _isLoading = false;
+        });
+        return;
+      }
+    } catch (_) {}
+    if (mounted) setState(() => _isLoading = false);
+  }
+
+  void _showSnack(String message, {bool error = false}) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Quiz « ${created.titre} » ajouté à la liste.'),
+        content: Text(message, style: GoogleFonts.inter(fontWeight: FontWeight.w500)),
+        backgroundColor: error ? const Color(0xFFB91C1C) : NexaColors.primaryGreen,
         behavior: SnackBarBehavior.floating,
       ),
     );
+  }
+
+  Future<void> _openNouveauQuiz() async {
+    final draft = await _CreerQuizAlertDialog.show(context);
+    if (!mounted || draft == null) return;
+
+    var created = draft;
+    try {
+      final response = await ApiService.post(
+        ApiConfig.uri('/api/formateur/quiz/$_formateurId'),
+        body: {'titre': draft.titre, 'cours': draft.cours, 'questions': draft.questions},
+      );
+      if (response.statusCode == 201) {
+        final decoded = json.decode(response.body);
+        if (decoded is Map && decoded['quiz'] != null) {
+          created = _quizFromJson(decoded['quiz'], 0);
+        }
+      } else {
+        _showSnack('Le quiz a ete ajoute localement, mais pas sauvegarde.', error: true);
+      }
+    } catch (_) {
+      _showSnack("API indisponible : le quiz reste ajoute localement.", error: true);
+    }
+
+    setState(() => _quizzes.insert(0, created));
+    _showSnack('Quiz "${created.titre}" ajoute.');
   }
 
   Future<void> _confirmDeleteQuiz(_QuizItem q) async {
@@ -72,7 +119,7 @@ class _QuizEvaluationsPageState extends State<QuizEvaluationsPage> {
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Supprimer le quiz ?', style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: NexaColors.darkNavy)),
-        content: Text('« ${q.titre} » sera retiré de la liste.', style: GoogleFonts.inter(fontSize: 14, height: 1.4)),
+        content: Text('"${q.titre}" sera retire de la liste.', style: GoogleFonts.inter(fontSize: 14, height: 1.4)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text('Annuler', style: GoogleFonts.inter(fontWeight: FontWeight.w600))),
           FilledButton(
@@ -84,45 +131,57 @@ class _QuizEvaluationsPageState extends State<QuizEvaluationsPage> {
       ),
     );
     if (ok != true || !mounted) return;
+
+    try {
+      await ApiService.delete(ApiConfig.uri('/api/formateur/quiz/$_formateurId/${q.id}'));
+    } catch (_) {}
+
     setState(() => _quizzes.removeWhere((e) => e.id == q.id));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('« ${q.titre} » supprimé.', style: GoogleFonts.inter(fontWeight: FontWeight.w500)),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
+    _showSnack('Quiz supprime.');
+  }
+
+  int get _totalParticipations => _quizzes.fold<int>(0, (s, q) => s + q.participations);
+
+  String get _moyenneGlobale {
+    final values = _quizzes.map((q) => double.tryParse(q.moyenne.replaceAll('%', '').trim())).whereType<double>().toList();
+    if (values.isEmpty) return '—';
+    return '${(values.reduce((a, b) => a + b) / values.length).round()} %';
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) return const FormateurLoading();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Quiz & Évaluations', style: GoogleFonts.inter(fontSize: 24, fontWeight: FontWeight.bold, color: NexaColors.darkNavy)),
-                const Text('Gérez les tests de connaissances pour vos cours.', style: TextStyle(color: Colors.grey)),
-              ],
-            ),
-            ElevatedButton.icon(
-              onPressed: _openNouveauQuiz,
-              icon: const Icon(Icons.add),
-              label: const Text('Nouveau Quiz'),
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5CF6), foregroundColor: Colors.white),
-            ),
+        FormateurPageHeader(
+          title: 'Quiz & evaluations',
+          subtitle: 'Tests de connaissances, scores et participation par cours.',
+          trailing: ElevatedButton.icon(
+            onPressed: _openNouveauQuiz,
+            icon: const Icon(Icons.add),
+            label: const Text('Nouveau quiz'),
+            style: formateurPrimaryStyle(),
+          ),
+        ),
+        const SizedBox(height: 20),
+        FormateurStatsRow(
+          items: [
+            FormateurStatItem(label: 'Quiz actifs', value: '${_quizzes.length}', icon: Icons.quiz_outlined, color: FormateurColors.accent),
+            FormateurStatItem(label: 'Participations', value: '$_totalParticipations', icon: Icons.people_outline, color: Colors.blue),
+            FormateurStatItem(label: 'Moyenne globale', value: _moyenneGlobale, icon: Icons.trending_up, color: NexaColors.primaryGreen),
           ],
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 24),
         Expanded(
-          child: ListView.separated(
-            itemCount: _quizzes.length,
-            separatorBuilder: (context, _) => const SizedBox(height: 16),
-            itemBuilder: (context, index) => _buildQuizCard(_quizzes[index]),
-          ),
+          child: _quizzes.isEmpty
+              ? FormateurEmptyState(icon: Icons.quiz_outlined, title: 'Aucun quiz', message: 'Creez un quiz pour evaluer vos apprenants.', actionLabel: 'Nouveau quiz', onAction: _openNouveauQuiz)
+              : ListView.separated(
+                  itemCount: _quizzes.length,
+                  separatorBuilder: (context, _) => const SizedBox(height: 16),
+                  itemBuilder: (context, index) => _buildQuizCard(_quizzes[index]),
+                ),
         ),
       ],
     );
@@ -146,15 +205,15 @@ class _QuizEvaluationsPageState extends State<QuizEvaluationsPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(q.titre, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                Text(q.coursLabel, style: const TextStyle(color: Colors.grey, fontSize: 14)),
+                Text('Cours : ${q.cours}', style: const TextStyle(color: Colors.grey, fontSize: 14)),
                 const SizedBox(height: 16),
-                Row(
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 8,
                   children: [
-                    _buildTag(Icons.help_outline, q.questionsLabel),
-                    const SizedBox(width: 16),
-                    _buildTag(Icons.people_outline, q.participationsLabel),
-                    const SizedBox(width: 16),
-                    _buildTag(Icons.trending_up, q.moyenneLabel),
+                    _buildTag(Icons.help_outline, '${q.questions} questions'),
+                    _buildTag(Icons.people_outline, '${q.participations} participations'),
+                    _buildTag(Icons.trending_up, '${q.moyenne} moyenne'),
                   ],
                 ),
               ],
@@ -162,14 +221,8 @@ class _QuizEvaluationsPageState extends State<QuizEvaluationsPage> {
           ),
           IconButton(
             tooltip: 'Supprimer',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
-            visualDensity: VisualDensity.compact,
             icon: const Icon(Icons.delete_outline_rounded, size: 22, color: Color(0xFF94A3B8)),
-            style: IconButton.styleFrom(
-              hoverColor: const Color(0xFFFEE2E2),
-              highlightColor: const Color(0xFFFEE2E2),
-            ),
+            style: IconButton.styleFrom(hoverColor: const Color(0xFFFEE2E2), highlightColor: const Color(0xFFFEE2E2)),
             onPressed: () => _confirmDeleteQuiz(q),
           ),
         ],
@@ -179,6 +232,7 @@ class _QuizEvaluationsPageState extends State<QuizEvaluationsPage> {
 
   Widget _buildTag(IconData icon, String label) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, size: 14, color: Colors.grey),
         const SizedBox(width: 4),
@@ -188,17 +242,9 @@ class _QuizEvaluationsPageState extends State<QuizEvaluationsPage> {
   }
 }
 
-/// Formulaire « Nouveau quiz » — renvoie un [_QuizItem] à afficher dans la liste.
-///
-/// [StatefulWidget] **sans** constructeur `const` (évite erreurs hot reload sur les dialogs).
-/// Si l’IDE affiche encore « Const class cannot… » après un gros refactor, faire un
-/// **hot restart** (`R` dans le terminal Flutter), pas seulement un hot reload (`r`).
 class _CreerQuizAlertDialog extends StatefulWidget {
   static Future<_QuizItem?> show(BuildContext context) {
-    return showDialog<_QuizItem>(
-      context: context,
-      builder: (_) => _CreerQuizAlertDialog(),
-    );
+    return showDialog<_QuizItem>(context: context, builder: (_) => _CreerQuizAlertDialog());
   }
 
   @override
@@ -211,12 +257,7 @@ class _CreerQuizAlertDialogState extends State<_CreerQuizAlertDialog> {
   String _cours = 'Marketing Digital';
   int _nbQuestions = 10;
 
-  static const _coursOptions = [
-    'Marketing Digital',
-    'SEO Avancé',
-    'Entrepreneuriat',
-    'Finance pour créateurs',
-  ];
+  static const _coursOptions = ['Marketing Digital', 'SEO Avance', 'Entrepreneuriat', 'Finance pour createurs'];
 
   @override
   void dispose() {
@@ -226,16 +267,16 @@ class _CreerQuizAlertDialogState extends State<_CreerQuizAlertDialog> {
 
   void _submit() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
-    final titre = _titre.text.trim();
-    final item = _QuizItem(
-      id: 'quiz-${DateTime.now().millisecondsSinceEpoch}',
-      titre: titre,
-      coursLabel: 'Cours : $_cours',
-      questionsLabel: '$_nbQuestions questions',
-      participationsLabel: '0 participations',
-      moyenneLabel: '— moyenne',
+    Navigator.of(context).pop(
+      _QuizItem(
+        id: 'local-${DateTime.now().millisecondsSinceEpoch}',
+        titre: _titre.text.trim(),
+        cours: _cours,
+        questions: _nbQuestions,
+        participations: 0,
+        moyenne: '—',
+      ),
     );
-    Navigator.of(context).pop(item);
   }
 
   @override
@@ -255,23 +296,14 @@ class _CreerQuizAlertDialogState extends State<_CreerQuizAlertDialog> {
                 TextFormField(
                   controller: _titre,
                   autofocus: true,
-                  decoration: InputDecoration(
-                    labelText: 'Titre du quiz',
-                    hintText: 'Ex. Quiz final — module 3',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Indiquez un titre';
-                    return null;
-                  },
+                  decoration: InputDecoration(labelText: 'Titre du quiz', hintText: 'Ex. Quiz final - module 3', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                  validator: (v) => v == null || v.trim().isEmpty ? 'Indiquez un titre' : null,
                 ),
                 const SizedBox(height: 16),
                 DropdownButtonFormField<String>(
-                  value: _cours,
-                  decoration: InputDecoration(
-                    labelText: 'Cours associé',
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
+                  key: ValueKey('cours_$_cours'),
+                  initialValue: _cours,
+                  decoration: InputDecoration(labelText: 'Cours associe', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
                   items: [for (final c in _coursOptions) DropdownMenuItem(value: c, child: Text(c))],
                   onChanged: (v) => setState(() => _cours = v ?? _coursOptions.first),
                 ),
@@ -296,7 +328,7 @@ class _CreerQuizAlertDialogState extends State<_CreerQuizAlertDialog> {
         FilledButton(
           onPressed: _submit,
           style: FilledButton.styleFrom(backgroundColor: const Color(0xFF8B5CF6), foregroundColor: Colors.white),
-          child: Text('Créer le quiz', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+          child: Text('Creer le quiz', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
         ),
       ],
     );
